@@ -2,8 +2,7 @@ from django.db import models
 from .utilisateur import Utilisateur
 
 class Etudiant(Utilisateur):
-    SEXE_CHOICES = [
-        ('M', 'Masculin'),
+    SEXE_CHOICES = [ ('M', 'Masculin'),
         ('F', 'Féminin'),
     ]
 
