@@ -33,7 +33,8 @@ function PrivateRoute({ children }) {
   const location = useLocation()
   if (loading) return null
   if (!user) {
-    toast.info('Veuillez vous connecter')
+    // Changed toast.info to toast() for a general message
+    toast('Veuillez vous connecter') //
     return <Navigate to="/login" state={{ from: location }} replace />
   }
   return children

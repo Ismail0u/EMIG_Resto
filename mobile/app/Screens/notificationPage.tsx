@@ -14,14 +14,13 @@ type NotificationCategory = 'Tout' | 'Réservation' | 'Achat' | 'Recharge' | 'Au
 
 // Données fictives pour les notifications avec une catégorie
 const dummyNotifications = [
+  { id: '6', title: 'Achat de 2 tickets', message: 'Votre achat de 2 tickets de déjeuner est confirmé.', time: 'il y a 2 secondes', category: 'Achat' as NotificationCategory },
   { id: '1', title: 'Nouvelle réservation confirmée', message: 'Votre réservation pour le déjeuner de demain a été confirmée.', time: 'il y a 5 min', category: 'Réservation' as NotificationCategory },
-  { id: '2', title: 'Solde bas', message: 'Votre solde est inférieur à FCFA 1000. Rechargez votre compte !', time: 'il y a 1 heure', category: 'Recharge' as NotificationCategory },
-  { id: '3', title: 'Mise à jour du menu', message: 'Le menu du DINER a été mis à jour pour cette semaine.', time: 'Hier', category: 'Autre' as NotificationCategory },
-  { id: '4', title: 'Ticket utilisé', message: 'Un ticket a été utilisé pour le déjeuner le 20 mai.', time: 'il y a 2 jours', category: 'Achat' as NotificationCategory },
-  { id: '5', title: 'Promotion spéciale !', message: 'Profitez de 10% de réduction sur votre prochaine recharge de 5000 FCFA ou plus.', time: 'il y a 3 jours', category: 'Recharge' as NotificationCategory },
-  { id: '6', title: 'Rappel de réservation', message: 'N\'oubliez pas votre réservation de petit-déjeuner le 25 mai.', time: 'il y a 4 jours', category: 'Réservation' as NotificationCategory },
-  { id: '7', title: 'Nouveau service disponible', message: 'Découvrez notre nouveau service de livraison de repas.', time: 'il y a 1 semaine', category: 'Autre' as NotificationCategory },
-  { id: '8', title: 'Achat de 2 tickets', message: 'Votre achat de 2 tickets de déjeuner est confirmé.', time: 'il y a 2 semaines', category: 'Achat' as NotificationCategory },
+  { id: '2', title: 'Mise à jour du menu', message: 'Le menu du DINER a été mis à jour pour cette semaine.', time: 'Hier', category: 'Autre' as NotificationCategory },
+  { id: '3', title: 'Ticket utilisé', message: 'Un ticket a été utilisé pour le déjeuner le 20 mai.', time: 'il y a 2 jours', category: 'Achat' as NotificationCategory },
+  { id: '4', title: 'Rappel de réservation', message: 'N\'oubliez pas votre réservation de petit-déjeuner le 25 mai.', time: 'il y a 4 jours', category: 'Réservation' as NotificationCategory },
+  { id: '5', title: 'Nouveau service disponible', message: 'Découvrez notre nouveau service de livraison de repas.', time: 'il y a 1 semaine', category: 'Autre' as NotificationCategory },
+  { id: '6', title: 'Achat de 2 tickets', message: 'Votre achat de 2 tickets de déjeuner est confirmé.', time: 'il y a 2 semaines', category: 'Achat' as NotificationCategory },
 ];
 
 const NotificationItem = ({ title, message, time }: { title: string; message: string; time: string }) => (
@@ -77,21 +76,30 @@ export default function NotificationsPage() {
         contentContainerStyle={{ paddingLeft: r.paddingHorizontal - 8, paddingRight: r.paddingHorizontal - 8 }} // Ajustement du padding pour les boutons
       >
         {categories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            onPress={() => setSelectedCategory(category)}
-            className={`py-2 px-4 rounded-full mx-1 ${
-              selectedCategory === category ? 'bg-blue-600' : 'bg-gray-200'
-            }`}
-          >
-            <Text
-              className={`${
-                selectedCategory === category ? 'text-white font-semibold' : 'text-gray-700'
-              }`}
-            >
-              {category}
-            </Text>
-          </TouchableOpacity>
+      <TouchableOpacity
+  key={category}
+  onPress={() => setSelectedCategory(category)}
+  className={`py-2 rounded-xl mx-1 ${
+    selectedCategory === category ? 'bg-blue-600' : 'bg-gray-200'
+  }`}
+  style={{
+    width: 85,
+    height:40, // ← Taille fixe pour tous
+    alignItems: 'center', 
+    justifyContent: 'center',
+  }}
+>
+  <Text
+    className={`${
+      selectedCategory === category ? 'text-white font-semibold' : 'text-gray-700'
+    }`}
+  >
+    {category}
+  </Text>
+</TouchableOpacity>
+
+
+
         ))}
       </ScrollView>
 

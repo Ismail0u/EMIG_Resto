@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import RNPickerSelect from 'react-native-picker-select';
 
 export default function RegisterScreen() {
   const [nom, setNom] = useState('');
@@ -25,14 +24,7 @@ export default function RegisterScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          nom,
-          prenom,
-          matricule,
-          email,
-          telephone,
-          password,
-          sexe,
-          role,
+          nom, prenom, matricule, email, telephone, password, sexe, role,
         }),
       });
 
@@ -40,8 +32,6 @@ export default function RegisterScreen() {
 
       if (response.ok) {
         Alert.alert("Succès", "Compte créé avec succès.");
-        setNom(''); setPrenom(''); setMatricule(''); setEmail('');
-        setTelephone(''); setPassword(''); setConfirmPassword(''); setSexe('');
         router.push('/Screens/Login');
       } else {
         console.log("Erreur côté backend:", data);
@@ -53,43 +43,46 @@ export default function RegisterScreen() {
     }
   };
 
+  const renderRadioButton = (label: string, value: string) => (
+    <TouchableOpacity
+      className="flex-row items-center mb-2"
+      onPress={() => setSexe(value)}
+    >
+      <View className="w-5 h-5 rounded-full border-2 border-gray-500 mr-2 items-center justify-center">
+        {sexe === value && <View className="w-3 h-3 rounded-full bg-[#12A2E1]" />}
+      </View>
+      <Text className="text-gray-800">{label}</Text>
+    </TouchableOpacity>
+  );
+
   return (
     <View className="flex-1 bg-white justify-center px-6">
-      <Text className="text-2xl font-bold text-blue-700 mb-6">Créer un nouveau compte</Text>
+      <Text className="text-2xl font-bold text-[#12A2E1] mb-6">Créer un nouveau compte</Text>
 
       <TextInput placeholder="Nom" value={nom} onChangeText={setNom} className="bg-gray-100 p-3 rounded mb-4" placeholderTextColor="#c1c1c1" />
       <TextInput placeholder="Prénom" value={prenom} onChangeText={setPrenom} className="bg-gray-100 p-3 rounded mb-4" placeholderTextColor="#c1c1c1" />
       <TextInput placeholder="Numéro de matricule" value={matricule} onChangeText={setMatricule} className="bg-gray-100 p-3 rounded mb-4" placeholderTextColor="#c1c1c1" />
       <TextInput placeholder="Adresse mail" value={email} onChangeText={setEmail} className="bg-gray-100 p-3 rounded mb-4" placeholderTextColor="#c1c1c1" />
       <TextInput placeholder="Numéro de téléphone" value={telephone} onChangeText={setTelephone} className="bg-gray-100 p-3 rounded mb-4" placeholderTextColor="#c1c1c1" />
-
-      <View className="bg-gray-100 p-3 rounded mb-4">
-        <RNPickerSelect
-          onValueChange={setSexe}
-          value={sexe}
-          placeholder={{ label: 'Sexe', value: null, color: '#c1c1c1' }}
-          items={[
-            { label: 'Masculin', value: 'M' },
-            { label: 'Féminin', value: 'F' },
-          ]}
-          style={{
-            inputIOS: { fontSize: 16, color: '#000' },
-            inputAndroid: { fontSize: 16, color: '#000' },
-            placeholder: { color: '#c1c1c1' },
-          }}
-        />
-      </View>
+  {/* MODIFIÉ ICI : Nouvelle structure pour les boutons radio */}
+        <View className="flex-row items-center mb-4">
+          <Text className="text-gray-700 font-semibold mr-4 mb-1">Sexe :</Text>
+          <View className="flex-row"> {/* Conteneur pour les boutons radio eux-mêmes */}
+            {renderRadioButton('Féminin  ', 'F')} {/* Ordre changé */}
+            {renderRadioButton('Masculin', 'M')}
+          </View>
+        </View>
 
       <TextInput placeholder="Mot de passe" value={password} onChangeText={setPassword} secureTextEntry className="bg-gray-100 p-3 rounded mb-4" placeholderTextColor="#c1c1c1" />
       <TextInput placeholder="Confirmer le mot de passe" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry className="bg-gray-100 p-3 rounded mb-4" placeholderTextColor="#c1c1c1" />
 
-      <TouchableOpacity className="bg-blue-700 p-3 rounded-xl mb-4" onPress={handleRegister}>
+      <TouchableOpacity className="bg-[#12A2E1] p-3 rounded-xl mb-4" onPress={handleRegister}>
         <Text className="text-white text-center font-bold">CRÉER UN COMPTE</Text>
       </TouchableOpacity>
 
       <Text className="text-center text-sm">
         Vous avez déjà un compte ?{' '}
-        <Text className="font-bold text-blue-700" onPress={() => router.push('/Screens/Login')}>
+        <Text className="font-bold text-[#12A2E1]" onPress={() => router.push('/Screens/Login')}>
           Se connecter
         </Text>
       </Text>
