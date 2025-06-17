@@ -7,8 +7,8 @@ class EtudiantSerializer(serializers.ModelSerializer):
     class Meta:
         model = Etudiant
         fields = ['id', 'matricule', 'nom', 'prenom', 'email',
-                  'telephone', 'sexe', 'solde', 'full_name']
-        read_only_fields = ['id', 'full_name', 'solde']
+                  'telephone', 'sexe', 'ticket_quota', 'full_name']
+        read_only_fields = ['id', 'full_name', 'ticket_quota']
 
 
     def get_full_name(self, obj):

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
+import { FiEdit, FiX, FiSave } from "react-icons/fi";
 
 const Profile = ({ user }) => {
-  // Initialize formData with default values from the user if available.
   const [formData, setFormData] = useState({
     fullName: user.fullName || "",
     email: user.email || "",
@@ -13,137 +13,96 @@ const Profile = ({ user }) => {
     state: user.state || "",
   });
 
-  // State to toggle edit mode
   const [isEditing, setIsEditing] = useState(false);
 
-  // Handle change of input fields
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Toggle editing mode
-  const toggleEditing = () => {
-    setIsEditing(!isEditing);
-  };
+  const toggleEditing = () => setIsEditing((prev) => !prev);
 
-  // Handle save action (you can add your saving logic here)
   const handleSave = () => {
-    // Example: Save the data, then disable editing.
+    // Ajoute ici ton appel API pour sauvegarder les données
     setIsEditing(false);
   };
 
   return (
-    <div className="w-full h-full p-6 bg-white shadow-md rounded-lg border border-gray-200">
-      <h2 className="text-xl font-semibold mb-2 text-gray-800">General Information</h2>
-      <p className="text-gray-700 mb-4">
-        Lorem ipsum dolor sit amet consectetur.
-      </p>
-
-      <div className="flex flex-col mb-6">
-        <h3 className="text-lg font-bold text-gray-900">
-          {formData.fullName || "John Doe"}
-        </h3>
-        <p className="text-gray-700">{user.role || "Role/Title"}</p>
+    <div className="w-full max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md border border-gray-200">
+      {/* Titre principal */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-1">Informations générales</h2>
+        <p className="text-gray-600 text-sm">Profil de l'utilisateur et informations organisationnelles</p>
       </div>
 
-      {/* Button to toggle editing mode */}
-      <div className="mb-4">
-        <button
-          onClick={toggleEditing}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md"
-        >
-          {isEditing ? "Annuler" : "Modifier"}
-        </button>
+      {/* Nom & rôle */}
+      <div className="mb-6">
+        <h3 className="text-xl font-semibold text-blue-700">{formData.fullName || "John Doe"}</h3>
+        <p className="text-gray-500 text-sm">{user.role || "Fonction inconnue"}</p>
       </div>
 
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">
-        Organization Information
-      </h3>
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <input
-          type="text"
-          name="fullName"
-          placeholder="Full Name"
-          value={formData.fullName}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-        <input
-          type="email"
-          name="email"
-          placeholder="Email Address"
-          value={formData.email}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-        <input
-          type="tel"
-          name="phone"
-          placeholder="Phone Number"
-          value={formData.phone}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-        <input
-          type="text"
-          name="fax"
-          placeholder="Fax"
-          value={formData.fax}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-        <input
-          type="text"
-          name="country"
-          placeholder="Country"
-          value={formData.country}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-        <input
-          type="text"
-          name="city"
-          placeholder="City"
-          value={formData.city}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-        <input
-          type="text"
-          name="postcode"
-          placeholder="Postcode"
-          value={formData.postcode}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-        <input
-          type="text"
-          name="state"
-          placeholder="State"
-          value={formData.state}
-          onChange={handleChange}
-          className="border p-2 rounded-md border-gray-300"
-          disabled={!isEditing}
-        />
-      </div>
-
-      {isEditing && (
-        <div>
+      {/* Boutons */}
+      <div className="flex gap-4 mb-4">
+        {!isEditing ? (
           <button
-            onClick={handleSave}
-            className="px-4 py-2 bg-green-600 text-white rounded-md"
+            onClick={toggleEditing}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-sm"
           >
-            Save
+            <FiEdit />
+            Modifier
           </button>
-        </div>
-      )}
+        ) : (
+          <>
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm"
+            >
+              <FiSave />
+              Enregistrer
+            </button>
+            <button
+              onClick={toggleEditing}
+              className="flex items-center gap-2 px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-800 rounded-md text-sm"
+            >
+              <FiX />
+              Annuler
+            </button>
+          </>
+        )}
+      </div>
+
+      {/* Formulaire en grille */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {[
+          { name: "fullName", label: "Nom complet" },
+          { name: "email", label: "Email" },
+          { name: "phone", label: "Téléphone" },
+          { name: "fax", label: "Fax" },
+          { name: "country", label: "Pays" },
+          { name: "city", label: "Ville" },
+          { name: "postcode", label: "Code postal" },
+          { name: "state", label: "État / Région" },
+        ].map(({ name, label }) => (
+          <div key={name}>
+            <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1">
+              {label}
+            </label>
+            <input
+              id={name}
+              name={name}
+              type="text"
+              value={formData[name]}
+              onChange={handleChange}
+              disabled={!isEditing}
+              placeholder={isEditing ? label : ""}
+              className={`w-full p-2 border rounded-md text-gray-700 focus:outline-none ${
+                isEditing
+                  ? "border-blue-300 focus:ring-2 focus:ring-blue-400"
+                  : "border-gray-200 bg-gray-50 cursor-not-allowed"
+              }`}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
