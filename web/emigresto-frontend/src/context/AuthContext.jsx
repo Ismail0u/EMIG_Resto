@@ -4,7 +4,6 @@ import { toast } from 'react-hot-toast'
 import { API } from '../services/apiService'
 import { tokenStorage } from '../services/tokenStorage'
 
-// 1) Création du contexte
 const AuthContext = createContext({
   user: null,
   loading: true,
@@ -12,6 +11,7 @@ const AuthContext = createContext({
   register: async () => {},
   logout: async () => {},
 })
+
 export function useAuth() {
   return useContext(AuthContext)
 }
@@ -20,12 +20,11 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // 2) checkAuth une seule fois au mount
   useEffect(() => {
     async function checkAuth() {
       const tok = await tokenStorage.getAccess()
       if (!tok) {
-        setLoading(false)  // pas de token => on passe à ready
+        setLoading(false)
         return
       }
       try {
@@ -40,7 +39,6 @@ export function AuthProvider({ children }) {
     checkAuth()
   }, [])
 
-  // 3) login
   const login = async (email, password) => {
     const data = await API.auth.login({ email, password })
     const u = await API.auth.me()
@@ -49,25 +47,25 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  // 4) register
   const register = async (payload) => {
     const res = await API.auth.register(payload)
     toast.success('Inscription réussie')
     return res
   }
 
-  // 5) logout
   const logout = async () => {
     await API.auth.logout()
     setUser(null)
     toast.success('Déconnexion réussie')
   }
 
-  // 6) pendant le chargement initial, on bloque tout
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p className="text-gray-500">Chargement de la session…</p>
+      <div className="flex items-center justify-center h-screen bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-500 border-solid mx-auto mb-4"></div>
+          <p className="text-gray-600 text-lg font-medium">Chargement de la session…</p>
+        </div>
       </div>
     )
   }

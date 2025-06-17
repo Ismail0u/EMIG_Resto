@@ -3,121 +3,94 @@ import "jspdf-autotable";
 import { ChevronDown, ChevronLeft, ChevronRight, FileText, Pencil } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-const DataTable = ({ data, editableColumns, rowsPerPage, onUpdateStock,pdfFileName }) => {
-  // États pour la recherche, le tri, la pagination et l'édition des cellules
+const DataTable = ({ data, editableColumns, rowsPerPage, onUpdateStock, pdfFileName }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [editableData, setEditableData] = useState(data);
   const [editingCell, setEditingCell] = useState(null);
-  const [tempValue, setTempValue] = useState(""); // Valeur temporaire pour l'édition
+  const [tempValue, setTempValue] = useState("");
 
-  // Met à jour les données éditables lorsque les données d'origine changent
   useEffect(() => {
     setEditableData(data);
   }, [data]);
 
-  // Obtient les colonnes dynamiquement à partir des données
   const columns = data.length > 0 ? Object.keys(data[0]) : [];
 
-  // Filtrage des données en fonction du terme de recherche
   const filteredData = editableData.filter((item) =>
     columns.some((col) =>
       String(item[col]).toLowerCase().includes(searchTerm.toLowerCase())
     )
   );
 
-  // Tri des données si une colonne est sélectionnée pour le tri
   const sortedData = sortBy
     ? [...filteredData].sort((a, b) =>
         typeof a[sortBy] === "string"
-          ? a[sortBy].localeCompare(b[sortBy]) // Tri alphabétique
-          : a[sortBy] - b[sortBy] // Tri numérique
+          ? a[sortBy].localeCompare(b[sortBy])
+          : a[sortBy] - b[sortBy]
       )
     : filteredData;
 
-      // Met à jour la valeur temporaire lors de la modification d'une cellule
-    const handleCellChange = (value) => {
-      setTempValue(value);
-    };
-  // Gère la validation de la modification (lorsqu'on appuie sur Entrée)
-    const handleKeyDown = async (e, rowIndex, colName) => {
-      if (e.key === "Enter") {
-        const newValue = tempValue.trim() === "" ? 0 : parseFloat(tempValue) || 0;
-        setEditingCell(null); // Quitte le mode édition  
-        // Mise à jour locale des données
-        const updatedData = [...editableData];
-        updatedData[rowIndex] = { ...updatedData[rowIndex], [colName]: newValue };
-        setEditableData(updatedData);
-        // Envoi de la mise à jour au serveur si la fonction onUpdateStock est définie
-        if (onUpdateStock) {
-          try {
-            await onUpdateStock(updatedData[rowIndex]["Produit"], colName, newValue);
-            console.log("✅ Mise à jour réussie !");
-          } catch (error) {
-            console.error("❌ Erreur lors de la mise à jour du stock", error);
-          }
+  const handleCellChange = (value) => setTempValue(value);
+
+  const handleKeyDown = async (e, rowIndex, colName) => {
+    if (e.key === "Enter") {
+      const newValue = tempValue.trim() === "" ? 0 : parseFloat(tempValue) || 0;
+      setEditingCell(null);
+      const updatedData = [...editableData];
+      updatedData[rowIndex] = { ...updatedData[rowIndex], [colName]: newValue };
+      setEditableData(updatedData);
+      if (onUpdateStock) {
+        try {
+          await onUpdateStock(updatedData[rowIndex]["Produit"], colName, newValue);
+          console.log("✅ Mise à jour réussie !");
+        } catch (error) {
+          console.error("❌ Erreur lors de la mise à jour du stock", error);
         }
       }
     }
+  };
 
-  // Pagination
   const totalPages = Math.ceil(sortedData.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const endIndex = Math.min(startIndex + rowsPerPage, sortedData.length);
   const paginatedData = sortedData.slice(startIndex, endIndex);
 
-  // Fonction pour exporter toutes les données en PDF
   const exportToPDF = () => {
     const pdf = new jsPDF("landscape");
-    // Ajouter un titre
     pdf.text(pdfFileName || "Données Exportées", 14, 10);
-
-    // Colonnes et lignes du tableau
     const tableColumn = columns;
-    const tableRows = sortedData.map((item) =>
-      columns.map((col) => item[col])
-    );
-
-    // Création du tableau dans le PDF
-    pdf.autoTable({
-      head: [tableColumn],
-      body: tableRows,
-      startY: 20,
-    });
-
-    // Sauvegarde du PDF avec un nom dynamique
+    const tableRows = sortedData.map((item) => columns.map((col) => item[col]));
+    pdf.autoTable({ head: [tableColumn], body: tableRows, startY: 20 });
     pdf.save(`${pdfFileName || "export"}.pdf`);
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg">
-      {/* Barre de recherche et tri */}
+    <div className="p-4 bg-white rounded-lg shadow">
       <div className="flex justify-between items-center mb-4">
         <input
           type="text"
           placeholder="Rechercher..."
-          className="p-2 border border-gray-300 rounded-md w-1/3"
+          className="p-2 border border-gray-300 rounded-md w-1/3 text-black"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         <div className="flex gap-2">
-          {/* Bouton pour trier */}
           <div className="relative">
             <button
-              className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
               Trier par
               <ChevronDown className="w-4 h-4" />
             </button>
             {isDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-32 bg-white bg-opacity-100 border border-gray-300 rounded-md shadow-lg z-50">
+              <div className="absolute right-0 mt-2 w-32 bg-white border border-gray-300 rounded-md shadow-lg z-50">
                 {columns.map((col) => (
                   <button
                     key={col}
-                    className="block w-full text-left px-4 py-2 hover:bg-gray-100"
+                    className="block w-full text-left px-4 py-2 hover:bg-blue-100"
                     onClick={() => {
                       setSortBy(col);
                       setIsDropdownOpen(false);
@@ -129,9 +102,8 @@ const DataTable = ({ data, editableColumns, rowsPerPage, onUpdateStock,pdfFileNa
               </div>
             )}
           </div>
-          {/* Bouton d'export en PDF */}
           <button
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center gap-2"
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 flex items-center gap-2"
             onClick={exportToPDF}
           >
             <FileText className="w-5 h-5" />
@@ -140,32 +112,33 @@ const DataTable = ({ data, editableColumns, rowsPerPage, onUpdateStock,pdfFileNa
         </div>
       </div>
 
-      {/* Tableau dynamique */}
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse border border-gray-300 table-fixed">
+        <table className="w-full border-collapse border border-gray-300 table-fixed text-black">
           <thead>
-            <tr className="bg-gray-100">
+            <tr className="bg-blue-100 text-black text-base font-semibold">
               {columns.map((col) => (
-                <th key={col} className="border p-2 text-center">{col}</th>
+                <th key={col} className="border p-3 text-center">{col}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {paginatedData.length > 0 ? (
               paginatedData.map((item, rowIndex) => (
-                <tr key={rowIndex} className="border text-center hover:bg-gray-50">
+                <tr key={rowIndex} className="border text-center hover:bg-blue-50 transition">
                   {columns.map((col) => {
                     const isEditable = editableColumns.includes(col);
                     return (
                       <td
                         key={col}
-                        className={`border p-2 relative group ${
-                          isEditable ? "bg-blue-200 cursor-pointer" : ""
+                        className={`border p-2 relative group text-sm ${
+                          isEditable
+                            ? "bg-blue-50 cursor-pointer hover:bg-blue-100 transition"
+                            : "bg-white"
                         }`}
                         onClick={() => {
                           if (isEditable) {
                             setEditingCell(`${rowIndex}-${col}`);
-                            setTempValue(editableData[startIndex + rowIndex][col]); // Correctement synchronisé avec la pagination
+                            setTempValue(editableData[startIndex + rowIndex][col]);
                           }
                         }}
                       >
@@ -175,13 +148,15 @@ const DataTable = ({ data, editableColumns, rowsPerPage, onUpdateStock,pdfFileNa
                             value={tempValue}
                             onChange={(e) => handleCellChange(e.target.value)}
                             onKeyDown={(e) => handleKeyDown(e, startIndex + rowIndex, col)}
-                            className="w-full p-1 border border-gray-300 rounded-md text-center"
+                            className="w-full p-1 border border-gray-300 rounded-md text-center text-black"
                             autoFocus
                           />
                         ) : (
-                          <div className="flex items-center justify-center">
+                          <div className="flex items-center justify-center text-base text-gray-800 font-medium">
                             {editableData[startIndex + rowIndex][col]}
-                            {isEditable && <Pencil className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 ml-2" />}
+                            {isEditable && (
+                              <Pencil className="w-4 h-4 text-blue-500 opacity-0 group-hover:opacity-100 ml-2" />
+                            )}
                           </div>
                         )}
                       </td>
@@ -191,7 +166,7 @@ const DataTable = ({ data, editableColumns, rowsPerPage, onUpdateStock,pdfFileNa
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="p-2 text-center">
+                <td colSpan={columns.length} className="p-2 text-center text-red-600">
                   Aucun résultat trouvé
                 </td>
               </tr>
@@ -200,7 +175,6 @@ const DataTable = ({ data, editableColumns, rowsPerPage, onUpdateStock,pdfFileNa
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-between items-center mt-4 p-2 border-t">
           <span className="text-gray-700 text-sm">
