@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
-import { FaMoneyBillWave, FaTicketAlt } from "react-icons/fa";
+
+// src/pages/Dashboard.jsx
+import { useQuery } from '@tanstack/react-query'
+import { FaMoneyBillWave, FaTicketAlt } from 'react-icons/fa'
 import {
   BarChart,
   Bar,
@@ -8,73 +10,58 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-} from "recharts";
-import DashboardCard from "../components/DashboardCard";
-import { API } from "../services/apiService";
+} from 'recharts'
+import DashboardCard from '../components/DashboardCard'
+import { API } from '../services/apiService'
 
 export default function DashboardVendeur() {
-  const [totalSales, setTotalSales] = useState(0);
-  const [totalTickets, setTotalTickets] = useState(0);
-  const [chartData, setChartData] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // React Query pour dashboard stats
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: async () => {
+      const [paiementsRes, ticketsRes] = await Promise.all([
+        API.paiement.list(),
+        API.ticket.list(),
+      ])
+      const ventes = paiementsRes.results || []
+      const tickets = ticketsRes.results || []
+      const caTotal = ventes.reduce((sum, v) => sum + Number(v.montant), 0)
+      const qtTotal = tickets.length // chaque objet ticket = 1 vendu
+      return { caTotal, qtTotal }
+    },
+    staleTime: 5 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const [paiementRes, ticketRes] = await Promise.all([
-          API.paiement.list(),
-          API.ticket.list(),
-        ]);
+  if (isLoading) return <div className="text-center py-10">Chargement...</div>
+  if (isError) return <div className="text-red-600 p-4">Erreur de chargement.</div>
 
-        const ventes = paiementRes.results || [];
-        const tickets = ticketRes.results || [];
-
-        const caTotal = ventes.reduce((sum, v) => sum + v.montant, 0);
-        const qtTotal = tickets.reduce((sum, t) => sum + t.quantite, 0);
-
-        setTotalSales(caTotal);
-        setTotalTickets(qtTotal);
-
-        setChartData([
-          { name: "Chiffre d’affaires", value: caTotal },
-          { name: "Tickets vendus", value: qtTotal },
-        ]);
-      } catch (err) {
-        console.error("Erreur chargement des données dashboard :", err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
-
-  if (loading) {
-    return <div className="text-center text-gray-600 py-10">Chargement...</div>;
-  }
+  const { caTotal, qtTotal } = data
 
   return (
-    <div className="container mx-auto py-10 space-y-10 px-4">
-      {/* Résumé Chiffres */}
+    <div className="container mx-auto py-10 px-4 space-y-10">
+      {/* Cards résumé */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
         <DashboardCard
           title="Chiffre d’affaires total"
-          value={`${totalSales.toLocaleString()} FCFA`}
-          icon={<FaMoneyBillWave className="text-green-600" />}
+          value={`${caTotal.toLocaleString()} FCFA`}
+          icon={<FaMoneyBillWave className="text-green-600" />}  
         />
         <DashboardCard
           title="Tickets vendus"
-          value={totalTickets}
+          value={qtTotal}
           icon={<FaTicketAlt className="text-blue-500" />}
         />
       </div>
 
-      {/* Graphique barres */}
+      {/* Graph */}
       <div className="bg-white rounded-2xl shadow-lg p-6">
         <h2 className="text-xl font-bold mb-4 text-gray-700">Statistiques générales</h2>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart
-            data={chartData}
+            data={[
+              { name: 'Chiffre d’affaires', value: caTotal },
+              { name: 'Tickets vendus', value: qtTotal },
+            ]}
             margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
           >
             <XAxis dataKey="name" />
@@ -86,5 +73,5 @@ export default function DashboardVendeur() {
         </ResponsiveContainer>
       </div>
     </div>
-  );
+  )
 }

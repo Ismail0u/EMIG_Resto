@@ -14,20 +14,10 @@ class PaiementViewSet(BaseModelViewSet):
     search_fields = ['etudiant__matricule']
     ordering_fields = ['date']
 
-    def perform_create(self, serializer):
-        """
-        Quand on POSTe un nouveau paiement, on :
-        1) force l’étudiant courant
-        2) récupère le mode_paiement en MAJUSCULES
-        """
-        mode = serializer.validated_data.get('mode_paiement', '').upper()
-         # ensure the request.user is linked to an Etudiant
-        try:
-            etu = Etudiant.objects.get(pk=self.request.user.pk)
-        except Etudiant.DoesNotExist:
-            raise ValidationError("Current user is not an Etudiant")
+def perform_create(self, serializer):
+    mode = serializer.validated_data.get('mode_paiement', '').upper()
+    serializer.save(mode_paiement=mode)
 
-        serializer.save(etudiant=etu, mode_paiement=mode)
 
 
     @action(detail=True, methods=['post'])
