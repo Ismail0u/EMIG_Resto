@@ -35,7 +35,7 @@ function PrivateRoute({ children }) {
   if (!user) {
     // Changed toast.info to toast() for a general message
     toast('Veuillez vous connecter') //
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/login" state={{ from: loc.pathname }} replace />
   }
   return children
 }
