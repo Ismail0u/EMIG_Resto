@@ -13,7 +13,11 @@ const queryClient = new QueryClient({
       // ici, tu peux mettre tes options globales (retry, onError, etc.)
     },
     queries: {
-      // idem pour les requêtes
+      // Garde le cache 5mn, ne refetch pas à chaque remount
+      staleTime: 5 * 60 * 1000,
+      cacheTime: 10 * 60 * 1000,
+      refetchOnWindowFocus: true,
+      keepPreviousData: true,
     },
   },
 });

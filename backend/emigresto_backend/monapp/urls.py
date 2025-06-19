@@ -1,3 +1,4 @@
+# backend/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
@@ -13,10 +14,17 @@ router.register('recharges', recharge_views.RechargeViewSet)
 router.register('etudiants', etudiant_views.EtudiantViewSet)
 router.register('jours', jour_views.JourViewSet)
 router.register('periodes', periode_views.PeriodeViewSet)
-router.register('reservations', reservation_views.ReservationViewSet, basename='reservations')  # ✅ Correction ici
+router.register('reservations', reservation_views.ReservationViewSet, basename='reservations')
 router.register('tickets', ticket_views.TicketViewSet)
 router.register('utilisateurs', utilisateur_views.UtilisateurViewSet)
-router.register('personnels', personnel_views.ResponsableGuichetViewSet)
+
+# Enregistrement des profils métiers
+router.register(r'magasiniers', personnel_views.MagasinierViewSet)
+router.register(r'vendeurtickets', personnel_views.VendeurTicketsViewSet)
+router.register(r'responsableguichets', personnel_views.ResponsableGuichetViewSet)
+router.register(r'chefservicerestaurant', personnel_views.ChefServiceRestaurantViewSet)
+router.register(r'administrateurs', personnel_views.AdministrateurViewSet)
+
 router.register('notifications', notification_views.NotificationViewSet)
 router.register('transactions', transaction_views.TransactionViewSet)
 router.register('recus', recu_views.RecuTicketViewSet)
@@ -36,4 +44,3 @@ urlpatterns = [
     # User details endpoint
     path('api/user-details/', user_details_views.UserDetailsAPIView.as_view(), name='user-details'),
 ]
-

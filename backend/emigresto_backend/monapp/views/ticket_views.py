@@ -1,4 +1,4 @@
-# monapp/views/ticket_viewset.py
+# views/ticket_viewset.py
 from ..models.tickets import Ticket
 from ..serializers.ticket_serializer import TicketSerializer
 from .base_viewset import BaseModelViewSet
@@ -10,5 +10,5 @@ class TicketViewSet(BaseModelViewSet):
     search_fields = ['etudiant__matricule']
     ordering_fields = ['date_vente', 'prix']
     
-    def perform_create(self, serializer):
-        serializer.save(etudiant=self.request.user)
+
+

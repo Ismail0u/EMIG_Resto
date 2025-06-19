@@ -9,68 +9,69 @@ import jsPDF from 'jspdf'
 
 export default function TicketForm() {
   const qc = useQueryClient()
-
-  // Chargement de la liste des étudiants pour le select
-  const { data: etuData, isLoading: etuLoading } = useQuery({
-    queryKey: ['etudiants'],
-    queryFn: () => API.etudiant.list({ page_size: 1000 })
-  })
-
   const [etudiantId, setEtudiantId] = useState('')
   const [typeTicket, setTypeTicket] = useState('PETIT')
   const [quantity, setQuantity] = useState(1)
   const [totalPrice, setTotalPrice] = useState(0)
 
-  // Recalcul du total à payer
+  const TICKET_PRICES = { PETIT: 80, DEJ: 125 }
+
+  const { data: etuData, isLoading: etuLoading } = useQuery({
+    queryKey: ['etudiants'],
+    queryFn: () => API.etudiant.list({ page_size: 1000 }),
+  })
+
   useEffect(() => {
-    setTotalPrice(quantity * (typeTicket === 'PETIT' ? 80 : 125))
+    setTotalPrice(quantity * TICKET_PRICES[typeTicket])
   }, [typeTicket, quantity])
 
-  // Mutation DRF : créer un Paiement puis un Ticket
+  // Mutation: create payment then tickets one by one
   const sellMutation = useMutation({
     mutationFn: async () => {
-      // 1) Création du paiement
+      if (!etudiantId) throw new Error('Étudiant non sélectionné')
+      if (quantity < 1) throw new Error('Quantité invalide')
+
+      // 1) Créer le paiement pour l'étudiant
       const paiement = await API.paiement.create({
         montant: totalPrice,
         mode_paiement: 'CASH',
-        // Note : DRF ignore le champ 'etudiant' en lecture seule, 
-        // il associe l'étudiant du ticket sur la vue côté back.
+        etudiant_id: etudiantId,
       })
-      // 2) Création du ticket
-      const ticket = await API.ticket.create({
-        etudiant: etudiantId,
-        type_ticket: typeTicket,
-        quantite: quantity,
-        paiement: paiement.id
-      })
-      return { paiement, ticket }
-    },
-    onSuccess: ({ paiement, ticket }) => {
-      // Invalidate pour rafraîchir les listes
-      qc.invalidateQueries(['paiements'])
-      qc.invalidateQueries(['tickets'])
-      toast.success(`🎉 Ticket #${ticket.id} généré pour ${ticket.etudiant.nom}`)
 
-      // Génération du PDF avec les champs du serializer
+      // 2) Créer les tickets individuellement
+      const tickets = []
+      for (let i = 0; i < quantity; i++) {
+        const ticket = await API.ticket.create({
+          etudiant_id: etudiantId,
+          type_ticket: typeTicket,
+        })
+        tickets.push(ticket)
+      }
+
+      return { paiement, tickets }
+    },
+    onSuccess: ({ paiement, tickets }) => {
+      const etu = etuData.results.find(e => e.id === etudiantId)
+      toast.success(`🎫 ${tickets.length} tickets créés pour ${etu.nom}`)
+
+      // Générer PDF pour le premier ticket
+      const first = tickets[0]
       const doc = new jsPDF()
       doc.setFontSize(16)
       doc.text('REÇU DE PAIEMENT - EMIGResto', 20, 20)
-
       doc.setFontSize(12)
-      doc.text(`Ticket #${ticket.id}`, 20, 40)
-      doc.text(`Étudiant : ${ticket.etudiant.nom} ${ticket.etudiant.prenom}`, 20, 50)
-      doc.text(`Type : ${ticket.type_ticket}`, 20, 60)
-      doc.text(`Quantité : ${ticket.quantite}`, 20, 70)
-      doc.text(`Prix unitaire : ${ticket.prix} FCFA`, 20, 80)          // 'prix' calculé par le serializer
-      doc.text(`Montant total : ${ticket.prix * ticket.quantite} FCFA`, 20, 90)
-      doc.text(`Date : ${new Date(ticket.date_vente).toLocaleString()}`, 20, 100)
-      doc.text(`QR Code : ${ticket.qr_code}`, 20, 110)
-
+      doc.text(`Étudiant : ${etu.nom} ${etu.prenom}`, 20, 40)
+      doc.text(`Type : ${first.type_ticket}`, 20, 50)
+      doc.text(`Quantité : ${tickets.length}`, 20, 60)
+      doc.text(`Prix unitaire : ${first.prix} FCFA`, 20, 70)
+      doc.text(`Montant total : ${first.prix * tickets.length} FCFA`, 20, 80)
+      doc.text(`Date : ${new Date(first.date_vente).toLocaleString()}`, 20, 90)
+      doc.text(`QR Code : ${first.qr_code}`, 20, 100)
       doc.setFontSize(10)
-      doc.text('Fait par : Le magasinier', 20, 130)
-      doc.save(`recu_ticket_${ticket.id}.pdf`)
+      doc.text('Fait par : Le magasinier', 20, 120)
+      doc.save(`recu_ticket_${first.id}.pdf`)
 
-      // Reset du formulaire
+      qc.invalidateQueries(['paiements', 'tickets'])
       setEtudiantId('')
       setTypeTicket('PETIT')
       setQuantity(1)
@@ -82,49 +83,33 @@ export default function TicketForm() {
 
   const handleSubmit = e => {
     e.preventDefault()
-    if (!etudiantId) return toast.error('Sélectionnez un étudiant')
-    if (quantity < 1 || quantity > 50)
-      return toast.error('Quantité doit être entre 1 et 50')
     sellMutation.mutate()
   }
 
   if (etuLoading) return <Spinner />
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-md space-y-6"
-    >
-      <h2 className="text-3xl font-bold text-center text-blue-700">
-        Vente de Ticket
-      </h2>
+    <form onSubmit={handleSubmit} className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow-md space-y-6">
+      <h2 className="text-3xl font-bold text-center text-blue-700">Vente de Ticket</h2>
 
-      {/* Affichage du total recalculé */}
       <div className="flex justify-between bg-blue-100 text-blue-800 p-4 rounded-lg font-semibold">
         <span>Total à payer :</span>
         <span>{totalPrice.toLocaleString()} FCFA</span>
       </div>
 
-      {/* Sélecteur d'étudiant */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Étudiant
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Étudiant</label>
         <StudentSelect
           value={etudiantId}
-          onChange={id => setEtudiantId(id)}
+          onChange={setEtudiantId}
           options={etuData.results}
           getOptionLabel={e => `${e.nom} ${e.prenom}`}
           getOptionValue={e => e.id}
-          required
         />
       </div>
 
-      {/* Type de ticket */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Type de ticket
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Type de ticket</label>
         <select
           value={typeTicket}
           onChange={e => setTypeTicket(e.target.value)}
@@ -135,11 +120,8 @@ export default function TicketForm() {
         </select>
       </div>
 
-      {/* Quantité */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Quantité
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Quantité</label>
         <input
           type="number"
           min={1}
@@ -150,21 +132,14 @@ export default function TicketForm() {
         />
       </div>
 
-      {/* Bouton de vente */}
       <button
         type="submit"
         disabled={sellMutation.isLoading}
         className="w-full bg-blue-700 text-white py-3 rounded-lg hover:bg-blue-800 transition disabled:opacity-50 flex justify-center items-center gap-2"
       >
-        {sellMutation.isLoading ? (
-          <>
-            <Spinner size="sm" />
-            <span>Enregistrement...</span>
-          </>
-        ) : (
-          <span>Vendre ({totalPrice.toLocaleString()} FCFA)</span>
-        )}
+        {sellMutation.isLoading ? <Spinner size="sm" /> : `Vendre (${totalPrice.toLocaleString()} FCFA)`}
       </button>
     </form>
   )
 }
+
