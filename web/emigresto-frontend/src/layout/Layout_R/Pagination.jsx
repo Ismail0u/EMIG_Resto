@@ -46,7 +46,7 @@ const Pagination = ({ currentPage, totalPages, setCurrentPage }) => {
               : 'bg-gray-200 hover:bg-gray-300'
           }`}
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-3 h-3" />
         </button>
 
         {pages.map((page, idx) =>
@@ -59,7 +59,7 @@ const Pagination = ({ currentPage, totalPages, setCurrentPage }) => {
               key={page}
               onClick={() => setCurrentPage(page)}
               aria-current={page === currentPage ? 'page' : undefined}
-              className={`px-3 py-1 rounded ${
+              className={`px-2 py-1 rounded text-sm ${
                 page === currentPage
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-200 hover:bg-gray-300'
@@ -80,7 +80,7 @@ const Pagination = ({ currentPage, totalPages, setCurrentPage }) => {
               : 'bg-gray-200 hover:bg-gray-300'
           }`}
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3 h-3" />
         </button>
       </div>
     </nav>

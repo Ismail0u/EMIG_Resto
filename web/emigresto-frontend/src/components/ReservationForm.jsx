@@ -10,19 +10,35 @@ export default function ReservationForm({ onClose, initial = null }) {
   const qc = useQueryClient()
 
   // Charger jours & périodes
-  const { data: jours, isLoading: jLoading }         = useQuery(['jours'],     () => API.jour.list())
-  const { data: periodes, isLoading: pLoading }     = useQuery(['periodes'], () => API.periode.list())
+  const { data: jours, isLoading: jLoading } = useQuery(['jours'], () => API.jour.list())
+  const { data: periodes, isLoading: pLoading } = useQuery(['periodes'], () => API.periode.list())
   const loadingLookups = jLoading || pLoading
 
-  const [etudiantId, setEtudiantId] = useState(initial?.etudiant || '')
-  const [jourId, setJourId]         = useState(initial?.jour || '')
-  const [periodeId, setPeriodeId]   = useState(initial?.periode || '')
-  const [date, setDate]             = useState(initial?.date ? new Date(initial.date) : new Date())
-  const [heure, setHeure]           = useState(initial?.heure || '12:00')
+  const [etudiantId, setEtudiantId] = useState(initial?.etudiant?.id || '')
+  const [jourId, setJourId] = useState(initial?.jour?.id || '')
+  const [periodeId, setPeriodeId] = useState(initial?.periode?.id || '')
+  const [date, setDate] = useState(initial?.date ? new Date(initial.date) : new Date())
+  const [heure, setHeure] = useState(initial?.heure || '12:00')
 
   const mut = useMutation(
     () => {
-      const payload = { etudiant: etudiantId, jour: jourId, periode: periodeId, date, heure }
+      // Formater la date au format YYYY-MM-DD
+      const formattedDate = date.toISOString().split('T')[0]
+      // Formater l'heure : si on a seulement HH:MM, on ajoute les secondes
+      const formattedHeure = heure.includes(':') ? `${heure}:00` : heure
+
+      const payload = {
+        jour: jourId,
+        periode: periodeId,
+        date: formattedDate,
+        heure: formattedHeure,
+      }
+
+      // Si un étudiant est sélectionné, on l'ajoute comme 'reservant_pour'
+      if (etudiantId) {
+        payload.reservant_pour = etudiantId
+      }
+
       return initial
         ? API.reservation.update(initial.id, payload)
         : API.reservation.create(payload)
@@ -31,6 +47,9 @@ export default function ReservationForm({ onClose, initial = null }) {
       onSuccess: () => {
         qc.invalidateQueries(['reservations'])
         onClose()
+      },
+      onError: (error) => {
+        console.error('Erreur lors de la création de la réservation:', error)
       }
     }
   )
@@ -46,7 +65,7 @@ export default function ReservationForm({ onClose, initial = null }) {
 
       {mut.isError && (
         <p className="text-red-600">
-          {mut.error.detail || 'Erreur lors de la sauvegarde.'}
+          {mut.error.detail || mut.error.message || 'Erreur lors de la sauvegarde.'}
         </p>
       )}
 

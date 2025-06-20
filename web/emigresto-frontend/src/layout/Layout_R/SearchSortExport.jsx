@@ -27,7 +27,7 @@ const SearchSortExport = ({ searchTerm, setSearchTerm, sortBy, setSortBy, export
       <input
         type="text"
         placeholder="Rechercher…"
-        className="p-2 border rounded w-1/3 focus:outline-blue-500"
+        className="p-1 text-sm border rounded w-1/3 focus:outline-blue-500"
         value={searchTerm}
         onChange={e => setSearchTerm(e.target.value.toLowerCase())} // casse insensible
         aria-label="Recherche"
@@ -35,7 +35,7 @@ const SearchSortExport = ({ searchTerm, setSearchTerm, sortBy, setSortBy, export
 
       <div className="flex gap-2" ref={ref}>
         <button
-          className="flex items-center gap-1 px-4 py-2 bg-gray-200 rounded focus:outline-blue-500"
+          className="flex items-center gap-1 p-1 text-sm bg-gray-200 rounded focus:outline-blue-500"
           onClick={() => setOpen(o => !o)}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -76,7 +76,7 @@ const SearchSortExport = ({ searchTerm, setSearchTerm, sortBy, setSortBy, export
         )}
 
         <button
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-blue-500"
+          className="p-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 focus:outline-blue-500"
           onClick={exportToPDF}
           aria-label="Exporter en PDF"
         >

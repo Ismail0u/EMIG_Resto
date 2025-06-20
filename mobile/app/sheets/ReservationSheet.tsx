@@ -114,7 +114,7 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
           jour: dayNumber,
           periode: mealToId[selectedMeal],
           date: formattedDate,
-          heure: "12:00:00",
+          heure: "12:00:00", // Format HH:MM:SS
         };
 
         const response = await fetch('http://127.0.0.1:8000/api/reservations/', {
@@ -136,7 +136,7 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
 
       if (allSuccessful) {
         setIsSuccessVisible(true);
-        onReservationSuccess(); // ✅ Appel correct ici
+        onReservationSuccess();
         setTimeout(() => {
           resetAll();
         }, 2500);
