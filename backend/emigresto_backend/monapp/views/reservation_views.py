@@ -1,24 +1,26 @@
-# monapp/views/reservation_views.py
+from django.utils import timezone
+from datetime import timedelta
 from rest_framework import viewsets, permissions
 from monapp.models.reservations import Reservation
-from monapp.serializers.reservation_serializer import (
-    ReservationSerializer,
-    ReservationCreateSerializer
-)
+from monapp.serializers.reservation_serializer import ReservationSerializer, ReservationCreateSerializer
 
 class ReservationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        # Si l'utilisateur est un responsable de guichet (ou a une permission spécifique)
-        # Il pourra voir toutes les réservations
-        if user.is_staff or user.has_perm('monapp.view_all_reservations'): # Exemple de vérification de permission
-            return Reservation.objects.all().order_by('-date', '-heure') # Ordonner pour un affichage plus cohérent
+        today = timezone.localdate()
+        start_of_week = today - timedelta(days=today.weekday())  # Lundi
+        end_of_week = start_of_week + timedelta(days=6)          # Dimanche
+
+        queryset = Reservation.objects.filter(date__range=(start_of_week, end_of_week))
+
+        if user.is_staff or user.has_perm('monapp.view_all_reservations'):
+            return queryset.order_by('-date', '-heure')
+
         try:
-            # Sinon, il ne voit que ses propres réservations
             etudiant = user.as_etudiant
-            return Reservation.objects.filter(etudiant=etudiant).order_by('-date', '-heure')
+            return queryset.filter(etudiant=etudiant).order_by('-date', '-heure')
         except Exception:
             return Reservation.objects.none()
 
@@ -30,6 +32,3 @@ class ReservationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         etudiant = self.request.user.as_etudiant
         serializer.save(etudiant=etudiant)
-
-    # Pour la mise à jour du statut, on pourrait avoir une action personnalisée ou utiliser update/partial_update
-    # Il faudra que le front-end envoie le statut mis à jour (par exemple, 'ANNULE' ou 'VALIDE')

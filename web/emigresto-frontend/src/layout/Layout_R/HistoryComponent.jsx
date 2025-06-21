@@ -42,7 +42,7 @@ const HistoryComponent = () => {
     // Nous ajoutons `flex flex-col h-full` ici pour qu'il remplisse le conteneur de la carte,
     // et que son contenu interne puisse défiler.
     <div className="flex flex-col h-full">
-      <h2 className="text-xl font-semibold mb-3 flex-shrink-0">Historique</h2>
+      <h2 className="text-sm font-semibold mt-2 flex-shrink-0">Historique</h2>
 
       {Object.entries(byPeriod).length > 0 ? (
         // flex-1 pour prendre l'espace restant, overflow-y-auto pour le défilement
@@ -52,7 +52,7 @@ const HistoryComponent = () => {
               <h3 className="font-medium text-gray-700 text-base">
                 Période: {periods[pid] || `ID: ${pid}`} ({list.length} réservations)
               </h3>
-              <ul className="list-disc pl-5 text-sm text-gray-600">
+              <ul className="list-disc text-sm text-gray-600">
                 {list.map(r => (
                   <li key={r.id}>
                     {r.etudiant?.nom} {r.etudiant?.prenom} ({r.etudiant?.matricule}) - {new Date(r.date).toLocaleDateString()}

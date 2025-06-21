@@ -49,7 +49,7 @@ const useReservationsData = () => {
           API.etudiant.list({ page_size: 500 }),
           API.jour.list({ page_size: 7 }),
           API.periode.list({ page_size: 50 }),
-          API.reservation.list({ page_size: 1000, statut: 'VALIDE' }),// Récupérer toutes les réservations
+          API.reservation.list({ page_size: 1000,}),// Récupérer toutes les réservations
         ]);
 
         setEtudiants(etuRes.results);

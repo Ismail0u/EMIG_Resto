@@ -8,7 +8,6 @@ from .jour_serializer import JourSerializer
 from .periode_serializer import PeriodeSerializer
 from django.utils import timezone
 from datetime import time, date
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
 class ReservationSerializer(serializers.ModelSerializer):
     etudiant        = EtudiantSerializer(read_only=True)
@@ -36,9 +35,10 @@ class ReservationSerializer(serializers.ModelSerializer):
 
 
 class ReservationCreateSerializer(serializers.ModelSerializer):
-    jour = serializers.PrimaryKeyRelatedField(queryset=Jour.objects.all())
-    periode = serializers.PrimaryKeyRelatedField(queryset=Periode.objects.all())
-    reservant_pour = serializers.PrimaryKeyRelatedField(
+    # on reçoit les PK, pas les objets nested
+    jour            = serializers.PrimaryKeyRelatedField(queryset=Jour.objects.all())
+    periode         = serializers.PrimaryKeyRelatedField(queryset=Periode.objects.all())
+    reservant_pour  = serializers.PrimaryKeyRelatedField(
         queryset=Reservation._meta.get_field('reservant_pour').related_model.objects.all(),
         required=False,
         allow_null=True
@@ -47,22 +47,9 @@ class ReservationCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Reservation
         fields = ['jour', 'periode', 'date', 'heure', 'reservant_pour']
-        extra_kwargs = {
-            'date': {'required': True},
-            'heure': {'required': True},
-        }
 
     def validate(self, attrs):
-        # Authentification JWT obligatoire
-        request = self.context.get('request')
-        jwt_auth = JWTAuthentication()
-        user_auth = jwt_auth.authenticate(request)
-        
-        if not user_auth:
-            raise serializers.ValidationError("Authentification requise")
-            
-        user = user_auth[0]
-
+        user = self.context['request'].user
         # Si l'utilisateur n'a pas d'étudiant associé, on ne peut pas réserver
         if not hasattr(user, 'etudiant'):
             raise serializers.ValidationError("L'utilisateur n'est pas un étudiant.")
@@ -70,10 +57,10 @@ class ReservationCreateSerializer(serializers.ModelSerializer):
         # Si aucun bénéficiaire n'est fourni, on réserve pour l'étudiant de l'utilisateur
         reservant = attrs.get('reservant_pour') or user.etudiant
         reservation_date = attrs.get('date')
-        reservation_jour = attrs.get('jour')
-        reservation_periode = attrs.get('periode')
+        reservation_jour = attrs.get('jour') # This is the Jour object (e.g., Lundi, Mardi)
+        reservation_periode = attrs.get('periode') # This is the Periode object (e.g., Petit-déjeuner, Déjeuner)
 
-        # Condition 1: Ne peut pas réserver deux fois pour même jour/période/date
+        # Condition 1: Cannot reserve twice for the same day and period on the same date
         if Reservation.objects.filter(
             reservant_pour=reservant,
             jour=reservation_jour,
@@ -84,13 +71,16 @@ class ReservationCreateSerializer(serializers.ModelSerializer):
                 "Vous avez déjà une réservation pour ce jour et cette période à cette date."
             )
 
-        # Condition 2: Ne peut pas réserver pour aujourd'hui sauf le lundi avant 11h
+        # Condition 2: Cannot reserve for the current day, except for Monday before 11 AM
         today = timezone.localdate()
         now = timezone.localtime().time()
 
+        # If reserving for today
         if reservation_date == today:
-            if today.weekday() == 0 and now < time(11, 0):
-                pass
+            # Check if it's Monday and before 11 AM
+            # weekday() returns 0 for Monday, 1 for Tuesday, etc.
+            if today.weekday() == 0 and now < time(11, 0): # Monday before 11 AM
+                pass # Allow reservation
             else:
                 raise serializers.ValidationError(
                     "Vous ne pouvez pas réserver pour aujourd'hui, sauf si c'est Lundi avant 11h."

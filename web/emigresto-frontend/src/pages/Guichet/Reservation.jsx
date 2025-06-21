@@ -42,11 +42,7 @@ export default function Reservation() {
     );
   }
 
-  // Si vous aviez des logiques de filtrage/tri/pagination locales ici,
-  // elles sont maintenant gérées à l'intérieur de useReservationsData.
-  // Vous n'avez plus besoin des states locaux pour `reservations`, `searchTerm`, `sortBy`, `currentPage`, etc.
-  // Ni des fonctions de filtrage/tri/pagination `filteredEtudiants`, `sortedEtudiants`, `paginatedEtudiants`, `totalPages`.
-
+ 
   return (
     <>
       <SearchSortExport
@@ -70,13 +66,13 @@ export default function Reservation() {
         />
       </div>
 
-      {totalPages > 1 && (
+     
         <Pagination
           currentPage={page}
           totalPages={totalPages}
           setCurrentPage={setPage}
         />
-      )}
+      
     </>
   );
 }

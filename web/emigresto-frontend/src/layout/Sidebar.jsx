@@ -9,7 +9,7 @@ const Sidebar = ({ menuItems, userOptions }) => {
   return (
     <div
       className={`h-screen bg-blue-600 text-white transition-all duration-300 flex flex-col ${
-        isOpen ? "w-52" : "w-16"
+        isOpen ? "w-46" : "w-12"
       }`}
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}

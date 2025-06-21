@@ -9,38 +9,84 @@ export default function CalendarComponent() {
   const [periods, setPeriods] = useState({})
   const [date, setDate] = useState(new Date())
   const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(true); // Added loading state
 
   // 🔄 Chargement des données à l'initialisation
   useEffect(() => {
-    API.reservation.list()
-      .then(res => setReservations(res.results))
-      .catch(() => setError("❗ Impossible de charger les réservations."))
+    setLoading(true); // Start loading
+    setError(null);    // Reset errors
 
-    API.periode.list()
-      .then(res => {
-        const mapping = {}
-        res.results.forEach(p => {
-          mapping[p.id] = p.nomPeriode
-        })
-        setPeriods(mapping)
+    // Fetch all relevant reservations (assuming page_size might be needed for many)
+    Promise.all([
+      API.reservation.list({ page_size: 1000 }), // Ensure all reservations are fetched
+      API.periode.list() // Fetch periods
+    ])
+      .then(([resReservations, resPeriodes]) => {
+        setReservations(resReservations.results);
+        const mapping = {};
+        resPeriodes.results.forEach(p => {
+          mapping[p.id] = p.nomPeriode;
+        });
+        setPeriods(mapping);
+        setLoading(false); // End loading
       })
-      .catch(() => console.error("Erreur chargement des périodes"))
+      .catch((err) => {
+        setError("❗ Impossible de charger les données du calendrier.");
+        console.error("CalendarComponent fetch error:", err);
+        setLoading(false); // End loading on error
+      });
   }, [])
 
   // 📅 Filtrage des réservations du jour sélectionné
   const daily = reservations.filter(r =>
     new Date(r.date).toDateString() === date.toDateString()
-  )
+  );
 
-  // 🔄 Regroupement des réservations par période
+  // Calcul des totaux par type de repas pour la date sélectionnée (DAILY reservations)
+  const totalsByMealType = daily.reduce((acc, r) => {
+    // Check if r.periode exists and has an id.
+    // r.periode is expected to be an object: {id: ..., nomPeriode: ...}
+    if (r.periode && r.periode.id) {
+        // Use the ID to get the name from the 'periods' mapping you created,
+        // or directly use r.periode.nomPeriode if available and reliable.
+        // Using periods[r.periode.id] is safer if r.periode.nomPeriode might be missing or inconsistent.
+        const periodeName = periods[r.periode.id];
+
+        if (periodeName) { // Make sure the period name was found
+            const lowerCasePeriodeName = periodeName.toLowerCase();
+            if (lowerCasePeriodeName.includes('petit-déjeuner')) {
+                acc.petitDej = (acc.petitDej || 0) + 1;
+            } else if (lowerCasePeriodeName.includes('déjeuner')) {
+                acc.dejeuner = (acc.dejeuner || 0) + 1;
+            } else if (lowerCasePeriodeName.includes('diner')) {
+                acc.diner = (acc.diner || 0) + 1;
+            }
+        }
+    }
+    return acc;
+  }, { petitDej: 0, dejeuner: 0, diner: 0 });
+
+  // 🔄 Regroupement des réservations par période pour l'affichage détaillé
   const byPeriod = daily.reduce((acc, r) => {
-    acc[r.periode] = (acc[r.periode] || [])
-    acc[r.periode].push(r)
-    return acc
-  }, {})
+    // Ensure r.periode is an object and has an ID
+    if (r.periode && r.periode.id) {
+        acc[r.periode.id] = (acc[r.periode.id] || []);
+        acc[r.periode.id].push(r);
+    }
+    return acc;
+  }, {});
+
+  // Add loading screen
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-gray-500">
+        Chargement du calendrier...
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden"> {/* Ajout de overflow-hidden ici */}
+    <div className="flex flex-col h-full overflow-hidden">
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded shadow">
           {error}
@@ -52,6 +98,7 @@ export default function CalendarComponent() {
         <Calendar
           onChange={setDate}
           value={date}
+          locale="fr-FR"
           tileClassName={({ date: dt }) =>
             reservations.some(r => new Date(r.date).toDateString() === dt.toDateString())
               ? 'bg-green-100 font-bold'
@@ -62,14 +109,11 @@ export default function CalendarComponent() {
               ? <span className="text-green-600">●</span>
               : null
           }
-          className="rounded-lg border-none shadow w-full smaller-calendar" // Ajout de 'smaller-calendar'
-          // maxDetail="month" // Optionnel: Limite la vue à la sélection de mois
-          // next2Label={null} // Masque les flèches "année suivante"
-          // prev2Label={null} // Masque les flèches "année précédente"
+          className="rounded-lg border-none shadow w-full smaller-calendar"
         />
       </div>
 
-      {/* Styles CSS spécifiques pour rendre le calendrier plus petit */}
+      {/* Vos styles CSS spécifiques pour rendre le calendrier plus petit - PRÉSERVÉS */}
       <style jsx>{`
         /* Réduction de la taille générale du calendrier */
         .smaller-calendar {
@@ -100,30 +144,33 @@ export default function CalendarComponent() {
         }
       `}</style>
 
-      {/* 📋 Détails des réservations pour la date sélectionnée */}
-      <div className="mt-6 flex-1 overflow-y-auto pr-2 text-sm"> {/* text-sm pour réduire la taille du texte ici */}
-        <h3 className="font-semibold text-gray-700 mb-3 text-base"> {/* Taille de titre ajustée */}
+      {/* Détails des réservations pour la date sélectionnée */}
+      {/* Les classes de taille de texte Tailwind sont conservées comme dans votre version */}
+      <div className=" flex-1 overflow-y-auto pr-2 text-xs">
+        <h3 className="font-semibold text-gray-700 text-sm mb-4">
           Réservations du {date.toLocaleDateString()}
         </h3>
 
-        {Object.keys(byPeriod).length > 0 ? (
-          Object.entries(byPeriod).map(([pid, list]) => (
-            <div key={pid} className="mb-2 pl-3 border-l-3 border-green-300"> {/* mb-2 et pl-3 réduits */}
-              <h4 className="font-medium text-green-800 text-sm"> {/* Taille de titre de période ajustée */}
-                🕒 Période {periods[pid] || pid}
-              </h4>
-              <ul className="list-disc pl-4 text-xs"> {/* pl-4 et text-xs pour les éléments de liste */}
-                {list.map(r => (
-                  <li key={r.id}>
-                    {r.etudiant?.nom} {r.etudiant?.prenom} ({r.etudiant?.matricule}) - {r.statut}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))
+        {/* Affichage du récapitulatif des totaux */}
+        {daily.length > 0 ? (
+          <div className="mb-4 p-3 bg-blue-50 rounded-md mt-2">
+            <h4 className="font-semibold text-blue-800 text-xs mb-2">Récapitulatif des réservations:</h4>
+            <p className="text-gray-700 text-base">
+              Petit-déjeuner: <span className="font-bold">{totalsByMealType.petitDej}</span>
+            </p>
+            <p className="text-gray-700 text-base">
+              Déjeuner: <span className="font-bold">{totalsByMealType.dejeuner}</span>
+            </p>
+            <p className="text-gray-700 text-base">
+              Dîner: <span className="font-bold">{totalsByMealType.diner}</span>
+            </p>
+          </div>
         ) : (
-          <p className="text-gray-500 text-xs">Aucune réservation pour cette date.</p>
+          <p className="p-3 text-gray-500 text-xs">Aucune réservation pour cette date.</p>
         )}
+
+       
+        
       </div>
     </div>
   )

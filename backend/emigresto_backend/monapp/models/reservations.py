@@ -1,10 +1,7 @@
 # monapp/models/reservations.py
-
 from django.db import models
 from django.utils import timezone
-from datetime import timedelta, time, date
-
-# Import Etudiant, Jour, Periode as you already have
+from datetime import timedelta, time, date # Import time and date
 from .etudiant import Etudiant
 from .jour import Jour
 from .periode import Periode
@@ -13,14 +10,13 @@ class Reservation(models.Model):
     STATUT_CHOICES = [
         ('VALIDE', 'Valide'),
         ('ANNULE', 'Annulée'),
-        ('EXPIRED', 'Expirée'), # New status for expired reservations
     ]
 
     id          = models.BigAutoField(primary_key=True)
-    date        = models.DateField()
-    heure       = models.TimeField(default=timezone.now)
+    date        = models.DateField() # Changed default=timezone.now, date will be provided by user
+    heure       = models.TimeField(default=timezone.now) # This might be dynamic based on period, or can be fixed
     statut      = models.CharField(max_length=10, choices=STATUT_CHOICES, default='VALIDE')
-    etudiant    = models.ForeignKey(
+    etudiant    = models.ForeignKey(  
         Etudiant,
         on_delete=models.CASCADE,
         related_name='reservations_effectuees',
@@ -36,42 +32,38 @@ class Reservation(models.Model):
     )
     jour        = models.ForeignKey(
         Jour,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='reservations',
-        help_text="Le jour de la semaine pour la réservation"
+        help_text="Jour de la réservation"
     )
     periode     = models.ForeignKey(
         Periode,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='reservations',
-        help_text="La période (petit-déj, déjeuner, dîner) de la réservation"
+        help_text="Période de la réservation (Petit-déjeuner, Déjeuner, DINER)"
     )
-    created_at = models.DateTimeField(auto_now_add=True) # Useful for tracking
-    updated_at = models.DateTimeField(auto_now=True)    # Useful for tracking
 
     class Meta:
-        # Ensures no duplicate reservations for the same student, day, period, and date
-        unique_together = ('reservant_pour', 'jour', 'periode', 'date')
-        verbose_name = "Réservation"
-        verbose_name_plural = "Réservations"
-        ordering = ['date', 'periode__nomPeriode', 'jour__id'] # Order by date, then period name, then day ID
+        db_table = 'reservation'
+        # Fix: 'periode__ordre' was changed to 'periode__nomPeriode'
+        # because the Periode model does not have an 'ordre' field,
+        # but it does have 'nomPeriode'.
+        ordering = ['date', 'periode__nomPeriode']
+        unique_together = ('etudiant', 'date', 'periode')
 
     def __str__(self):
-        beneficiary_name = self.beneficiaire.get_full_name() if self.beneficiaire else "N/A"
-        return f"Réservation pour {beneficiary_name} le {self.date} ({self.jour.nomJour}, {self.periode.nomPeriode}) - Statut: {self.statut}"
+        # Assuming Periode model has a 'nomPeriode' field,
+        # or you might need to adjust this if it's 'nom_periode'
+        # based on how you access it in other parts of your code.
+        # Based on periode.py, it's nomPeriode.
+        return f"Réservation de {self.etudiant.get_full_name} pour {self.periode.nomPeriode} le {self.date}"
 
-    def clean(self):
-        # Additional validation can go here if needed, but serializer handles most of it.
-        pass
 
-    def save(self, *args, **kwargs):
-        self.full_clean() # Ensure model-level validation runs
-        super().save(*args, **kwargs)
-
-    def valider(self):
+    # @TODO: Re-evaluate if this method is still needed or if serializer validation is enough
+    def creer(self):
         """Valide et enregistre une nouvelle réservation."""
-        self.statut = 'VALIDE'
-        self.save(update_fields=['statut'])
+        # This logic will mostly be handled by the serializer's validate method
+        self.save()
 
     def annuler(self):
         """Annule la réservation (soft)."""
@@ -89,12 +81,6 @@ class Reservation(models.Model):
                 setattr(self, field, val)
         self.save()
 
-    def mark_as_expired(self):
-        """Marks the reservation as expired."""
-        if self.statut != 'ANNULE': # Only mark as expired if not already cancelled
-            self.statut = 'EXPIRED'
-            self.save(update_fields=['statut'])
-
     @property
     def beneficiaire(self):
         """Retourne l'Etudiant bénéficiaire de la réservation."""
@@ -102,11 +88,12 @@ class Reservation(models.Model):
 
     def get_details(self):
         """Chaîne descriptive de la réservation."""
+        # Assuming Periode model has a 'nomPeriode' field,
+        # or you might need to adjust this if it's 'nom_periode'
+        # based on how you access it in other parts of your code.
+        # Based on periode.py, it's nomPeriode.
         return (
-            f"Réservation #{self.id} — Bénéficiaire : {self.beneficiaire.get_full_name()}, "
-            f"Date: {self.date.strftime('%Y-%m-%d')}, Heure: {self.heure.strftime('%H:%M')}, "
-            f"Jour: {self.jour.nomJour}, Période: {self.periode.nomPeriode}, Statut: {self.statut}"
+            f"Réservation #{self.id} — Bénéficiaire : {self.beneficiaire.get_full_name}, "
+            f"Jour : {self.jour.nomJour}, Période : {self.periode.nomPeriode}, "
+            f"Date : {self.date}, Heure : {self.heure}, Statut : {self.statut}"
         )
-
-    # Consider adding a custom manager for more complex queries related to reservations
-    # For example, Reservation.objects.active().for_today()

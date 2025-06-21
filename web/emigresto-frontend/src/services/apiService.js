@@ -231,11 +231,6 @@ export const API = {
   transaction: new BaseService('transactions'),
   recu: new BaseService('recus'),
   notification: new BaseService('notifications'),
+  personnel: new BaseService('personnels'),
   utilisateur: new BaseService('utilisateurs'),
-
-  // Profils métiers
-  magasiniers: new BaseService('magasiniers'),
-  vendeurtickets: new BaseService('vendeurtickets'),
-  responsableguichets: new BaseService('responsableguichets'),
-  chefservicerestaurant: new BaseService('chefservicerestaurant'),
 }
