@@ -40,13 +40,14 @@ export function AuthProvider({ children }) {
   }, [])
 
   const login = async (email, password) => {
-    const data = await API.auth.login({ email, password })
-    const u = await API.auth.me()
-    setUser(u)
+    const data = await API.auth.login({ email, password }) // => { access, refresh }
+    const userDetails = await API.auth.me()                // récupère l'utilisateur connecté
+    const userFull = await API.utilisateur.get(userDetails.id) // ici on a le role
+  
+    setUser(userFull)
     toast.success('Connexion réussie')
-    return data
+    return { user: userFull } // ✅ maintenant user.role est bien disponible
   }
-
   const register = async (payload) => {
     const res = await API.auth.register(payload)
     toast.success('Inscription réussie')

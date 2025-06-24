@@ -1,9 +1,9 @@
-// src/pages/RegisterPage.jsx
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import logsvg2 from '../assets/images/logsvg2.png'
 import { API } from '../services/apiService'
+import { toast } from 'react-hot-toast'
 
 export default function RegisterPage() {
   const { register } = useAuth()
@@ -13,11 +13,12 @@ export default function RegisterPage() {
     prenom: '',
     telephone: '',
     password: '',
-    role: 'ETUDIANT'
+    role: ''
   })
   const [error, setError] = useState(null)
-  const nav = useNavigate()
+  const navigate = useNavigate()
 
+  // Rôles disponibles dans le formulaire
   const roles = [
     { value: 'ETUDIANT', label: 'Étudiant' },
     { value: 'MAGASINIER', label: 'Magasinier' },
@@ -29,17 +30,17 @@ export default function RegisterPage() {
   ]
 
   const handleChange = e =>
-    setForm(f => ({ ...f, [e.target.name]: e.target.value }))
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
 
   const handleSubmit = async e => {
     e.preventDefault()
     setError(null)
     try {
-      // 1) création utilisateur, on récupère directement user_id
+      // 1) Création du compte utilisateur
       const { user_id, role, email } = await register(form)
-      console.log('✅ Register response:', { user_id, role, email })
+      console.log('✅ Utilisateur créé:', { user_id, role, email })
 
-      // 2) si c'est un profil métier, on poste l'ID retourné
+      // 2) Création du profil métier si nécessaire
       if (form.role !== 'ETUDIANT') {
         const endpointMap = {
           MAGASINIER: 'magasiniers',
@@ -49,25 +50,26 @@ export default function RegisterPage() {
           CUISINIER: 'cuisiniers',
           ADMIN: 'administrateurs',
         }
-        const ep = endpointMap[form.role]
-        if (ep) {
-          const payload = { utilisateur: user_id }
-          console.log(`→ POST /api/${ep}/`, payload)
-          await API[ep].create(payload)
-          console.log('✅ Profil métier créé')
+        const endpoint = endpointMap[form.role]
+        if (endpoint) {
+          await API[endpoint].create({ utilisateur: user_id })
+              // 🛠️ Mise à jour du rôle dans le modèle utilisateur
+          await API.utilisateur.update(user_id, { role: form.role })
+          console.log('✅ Profil métier enregistré')
         }
       }
 
-      // 3) redirection vers login
-      nav('/login')
+      // 3) Redirection vers la page de connexion
+      toast.success('Inscription réussie ! Vous pouvez vous connecter.')
+      navigate('/login')
     } catch (e) {
-      console.error('❌ Registration error:', e)
-      setError(e.message || 'Erreur inscription')
+      console.error('❌ Erreur lors de l’inscription :', e)
+      setError(e.message || 'Erreur inconnue lors de l’inscription')
     }
   }
 
   return (
-    <div className="min-h-screen max-h-screen flex items-center justify-center bg-blue-50 px-4 overflow-y-auto">
+    <div className="min-h-screen flex items-center justify-center bg-blue-50 px-4 overflow-y-auto">
       <div className="max-w-5xl w-full bg-white rounded-lg shadow-lg flex flex-col md:flex-row overflow-hidden max-h-full">
         {/* Illustration */}
         <div className="md:w-1/2 hidden md:flex items-center justify-center bg-blue-100 p-8">
@@ -84,20 +86,21 @@ export default function RegisterPage() {
           <h1 className="text-3xl font-bold text-blue-700 mb-6 text-center md:text-left">
             Inscription
           </h1>
+
           {error && <p className="text-red-600 mb-4">{error}</p>}
+
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Champs de base */}
             {['email', 'nom', 'prenom', 'telephone', 'password'].map(field => (
               <div key={field}>
-                <label className="block mb-1 capitalize text-blue-700">
-                  {field}
-                </label>
+                <label className="block mb-1 capitalize text-blue-700">{field}</label>
                 <input
                   name={field}
                   type={field === 'password' ? 'password' : 'text'}
-                  className="w-full border border-blue-400 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
                   value={form[field]}
                   onChange={handleChange}
                   required={field !== 'telephone'}
+                  className="w-full border border-blue-400 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
                 />
               </div>
             ))}
@@ -110,7 +113,9 @@ export default function RegisterPage() {
                 value={form.role}
                 onChange={handleChange}
                 className="w-full border border-blue-400 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-600"
+                required
               >
+                <option value="">-- Choisir un rôle --</option>
                 {roles.map(r => (
                   <option key={r.value} value={r.value}>
                     {r.label}
@@ -126,7 +131,8 @@ export default function RegisterPage() {
               S’inscrire
             </button>
           </form>
-          <p className="mt-6 text-center md:text-left text-sm text-gray-600">
+
+          <p className="mt-6 text-center text-sm text-gray-600">
             Déjà inscrit ?{' '}
             <Link to="/login" className="text-red-600 hover:underline">
               Connexion
