@@ -1,8 +1,8 @@
 // src/components/Reservations/Reservation.jsx ou src/pages/Reservation.jsx (selon votre structure)
 
 import React from "react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable"; 
 import Pagination from "../../layout/Layout_R/Pagination";
 import SearchSortExport from "../../layout/Layout_R/SearchSortExport";
 import Table from "../../layout/Layout_R/Table"; // Assuming this is your DataTable component
