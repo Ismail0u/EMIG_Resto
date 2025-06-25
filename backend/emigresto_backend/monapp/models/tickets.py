@@ -30,11 +30,22 @@ class Ticket(models.Model):
         ordering = ['-date_vente']
 
     def save(self, *args, **kwargs):
-        # Prix automatique selon le type
+    # Prix automatique selon le type
         self.prix = self.PRICES.get(self.type_ticket, 0)
-        # QR code génération simple (UUID)
+
+    # QR code génération simple (UUID)
         if not self.qr_code:
             self.qr_code = str(self.id)
+
+    # Si c’est une création (pas une mise à jour)
+        if self._state.adding:
+            if self.type_ticket == self.PETIT_DEJ:
+                self.etudiant.ticket_quota_80 += 1
+            elif self.type_ticket == self.DEJ_DINER:
+                self.etudiant.ticket_quota_125 += 1
+
+            self.etudiant.save(update_fields=['ticket_quota_80', 'ticket_quota_125'])
+
         super().save(*args, **kwargs)
 
     def __str__(self):

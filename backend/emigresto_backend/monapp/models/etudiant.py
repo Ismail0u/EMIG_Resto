@@ -13,7 +13,8 @@ class Etudiant(Utilisateur):
         help_text="Solde du compte étudiant"
     )
     
-    ticket_quota = models.PositiveIntegerField(default=0, help_text="Tickets numériques restants")
+    ticket_quota_80 = models.PositiveIntegerField(default=0, help_text="Tickets numériques restants")
+    ticket_quota_125 = models.PositiveIntegerField(default=0, help_text="Tickets numériques restants")
    
     
     sexe = models.CharField(
