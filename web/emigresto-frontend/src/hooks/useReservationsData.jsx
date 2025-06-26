@@ -1,8 +1,8 @@
 // src/hooks/useReservationsData.js
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable"; 
 import { API } from "../services/apiService"; // Assurez-vous que le chemin est correct
  // Assuming you use react-toastify for notifications
 
@@ -253,16 +253,23 @@ const useReservationsData = () => {
   );
 
   const exportToPDF = useCallback(() => {
-    const pdf = new jsPDF("landscape");
-    pdf.text("Liste des Réservations", 14, 10);
-    const head = ["ID", "Nom", "Prénom", ...jours.map((j) => j.nomJour)];
+    const pdf = new jsPDF("landscape")
+    pdf.text("Liste des Réservations", 14, 10)
+  
+    // En-tête du tableau : ID, nom, prénom + chaque jour
+    const head = [
+      ["ID", "Nom", "Prénom", ...jours.map((j) => j.nomJour)]
+    ]
+  
+    // Corps du tableau
     const body = sortedEtudiants.map((e) => {
-      const row = [e.id, e.nom, e.prenom];
+      const row = [e.id, e.nom, e.prenom]
+  
       jours.forEach((j) => {
-        let s = "";
+        let s = ""
         periodes.forEach((p) => {
-          const key = `${j.id}-${p.id}`; 
-          const isReserved = reservationsMap.get(e.id)?.has(key); // Check only active reservations
+          const key = `${j.id}-${p.id}`; // Clé correcte pour la map de l'étudiant
+          const isReserved = reservationsMap.get(e.id)?.has(key);
           s += isReserved ? "✔ " : "✘ ";
         });
         row.push(s.trim());

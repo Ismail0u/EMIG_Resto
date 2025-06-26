@@ -6,8 +6,8 @@ import Spinner from '../../components/Spinner'
 import { API } from '../../services/apiService'
 import SearchSortExport from '../../layout/Layout_R/SearchSortExport'
 import Pagination from '../../layout/Layout_R/Pagination'
-import jsPDF from "jspdf";
-import "jspdf-autotable";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable"; 
 
 export default function StudentList() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -59,18 +59,11 @@ export default function StudentList() {
   const exportPDF = () => {
     const pdf = new jsPDF("landscape");
     pdf.text("Liste des Étudiants", 14, 10);
-
+  
     const head = [
-      "ID",
-      "Matricule",
-      "Nom & Prénom",
-      "Email",
-      "Téléphone",
-      "Sexe",
-      "Solde (FCFA)",
-      "Tickets Restants",
+      ["ID", "Matricule", "Nom & Prénom", "Email", "Téléphone", "Sexe", "Solde (FCFA)", "Tickets Restants"]
     ];
-
+  
     const body = filteredAndSortedEtudiants.map((e) => [
       e.id,
       e.matricule,
@@ -81,10 +74,16 @@ export default function StudentList() {
       Number(e.solde || 0).toFixed(2),
       e.ticket_quota,
     ]);
-
-    pdf.autoTable({ head: [head], body: body, startY: 20 });
+  
+    autoTable(pdf, {
+      head,
+      body,
+      startY: 20,
+    });
+  
     pdf.save("Liste_Etudiants.pdf");
   };
+  
 
   if (isLoading) return <Spinner />
 
