@@ -60,6 +60,7 @@ export default function TicketForm() {
       doc.setFontSize(16)
       doc.text('REÇU DE PAIEMENT - EMIGResto', 20, 20)
       doc.setFontSize(12)
+      
       doc.text(`Étudiant : ${etu.nom} ${etu.prenom}`, 20, 40)
       doc.text(`Type : ${first.type_ticket}`, 20, 50)
       doc.text(`Quantité : ${tickets.length}`, 20, 60)

@@ -24,6 +24,7 @@ import History from './pages/History'
 import Profile_V from './pages/Profile_V'
 
 // Auth
+import Logout from './pages/Logout'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -45,7 +46,9 @@ function PublicRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return null
   if (user) {
-    toast.success('Vous êtes déjà connecté')
+    if (user.role === 'VENDEUR_TICKETS') {
+      return <Navigate to="/dashboardVendeur" replace />
+    }
     return <Navigate to="/" replace />
   }
   return children
@@ -187,6 +190,14 @@ export default function App() {
               </PrivateRoute>
             }
           />
+          <Route
+     path="/logout"
+     element={
+       <PrivateRoute>
+         <Logout/>
+       </PrivateRoute>
+     }
+   />
 
           {/* Redirection si route non trouvée */}
           <Route path="*" element={<Navigate to="/" replace />} />

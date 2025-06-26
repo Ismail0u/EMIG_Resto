@@ -1,10 +1,10 @@
-// src/services/apiServices.js
+// src/services/apiService.js
 import axios from 'axios'
 import { toast } from 'react-hot-toast'
 import { API_BASE_URL } from '../config'
 import { tokenStorage } from './tokenStorage'
 
-// Configuration Axios avancée
+// 1. Création d’une instance Axios avec config de base
 const api = axios.create({
   baseURL: API_BASE_URL,
   timeout: 10_000,
@@ -14,212 +14,135 @@ const api = axios.create({
   },
 })
 
-// Cache des requêtes GET
-const requestCache = new Map()
-const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
-
-// Intercepteur de requête
+// 2. Intercepteur de requête : injecte toujours le token si présent
 api.interceptors.request.use(
-  async (config) => {
-    // Gestion du cache pour les requêtes GET
-    if (config.method === 'get') {
-      const cacheKey = `${config.url}-${JSON.stringify(config.params)}`
-      const cached = requestCache.get(cacheKey)
-
-      if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-        return Promise.resolve(cached.response)
-      }
-    }
-
-    // Ajout du token d'authentification
+  async config => {
     const token = await tokenStorage.getAccess()
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
-
     return config
   },
-  (error) => Promise.reject(error)
+  error => Promise.reject(error)
 )
 
-// Intercepteur de réponse
+// 3. Rafraîchissement automatique en cas de 401
 let isRefreshing = false
-let refreshSubscribers = []
+let subscribers = []
 
 api.interceptors.response.use(
-  (response) => {
-    // Mise en cache des réponses GET
-    if (response.config.method === 'get') {
-      const cacheKey = `${response.config.url}-${JSON.stringify(response.config.params)}`
-      requestCache.set(cacheKey, {
-        response,
-        timestamp: Date.now()
-      })
-    }
-    return response
-  },
-  async (error) => {
-    const { config, response } = error
-
-    // Gestion des erreurs 401
+  response => response, // passe la réponse quand tout va bien
+  async error => {
+    const { response, config } = error
     if (response?.status === 401 && !config._retry) {
       config._retry = true
 
-      // Si on est déjà en train de rafraîchir, on attend
+      // 3.1 Si déjà en refresh, on attend que ça se termine
       if (isRefreshing) {
-        return new Promise(resolve => {
-          refreshSubscribers.push((token) => {
+        return new Promise(resolve =>
+          subscribers.push(token => {
             config.headers.Authorization = `Bearer ${token}`
             resolve(api(config))
           })
-        })
+        )
       }
 
-      // On essaie de rafraîchir le token
+      // 3.2 Sinon on lance le refresh
       try {
         isRefreshing = true
         const refreshToken = await tokenStorage.getRefresh()
-        if (!refreshToken) {
-          throw new Error('No refresh token available')
-        }
+        if (!refreshToken) throw new Error('No refresh token')
 
         const { data } = await axios.post(
           `${API_BASE_URL}auth/token/refresh/`,
           { refresh: refreshToken }
         )
-
         await tokenStorage.setAccess(data.access)
 
-        // On met à jour les requêtes en attente
-        refreshSubscribers.forEach(cb => cb(data.access))
-        refreshSubscribers = []
+        // Notifie toutes les requêtes en attente
+        subscribers.forEach(cb => cb(data.access))
+        subscribers = []
 
-        // On réessaie la requête originale
+        // Requête originale avec nouveau token
         config.headers.Authorization = `Bearer ${data.access}`
         return api(config)
-      } catch (refreshError) {
+      } catch (e) {
+        // Si refresh échoue, on déloge l’utilisateur
         await tokenStorage.clear()
-        toast.error('Session expirée, veuillez vous reconnecter')
+        toast.error('Session expirée, reconnectez-vous')
         window.location.href = '/login'
-        return Promise.reject(refreshError)
+        return Promise.reject(e)
       } finally {
         isRefreshing = false
       }
     }
 
-    // Gestion des autres erreurs
+    // 4. Gestion des autres erreurs
     return handleError(error)
   }
 )
 
-// Gestion des erreurs
-const handleError = (error) => {
+// 4. Gestion centralisée des erreurs axios
+function handleError(error) {
   if (error.response) {
     const { status, data } = error.response
-    const errorMessage = data.detail || data.message || 'Une erreur est survenue'
-
+    const msg = data.detail || data.message || 'Erreur serveur'
     if (status === 401) {
       tokenStorage.clear()
-      toast.error('Session expirée, veuillez vous reconnecter')
+      toast.error('Session expirée, reconnectez-vous')
     } else {
-      toast.error(`Erreur [${status}]: ${errorMessage}`)
+      toast.error(`Erreur [${status}] : ${msg}`)
     }
-
-    throw new Error(errorMessage)
+    throw new Error(msg)
   }
-
-  toast.error('Erreur réseau: Impossible de contacter le serveur')
+  toast.error('Erreur réseau : impossible de contacter le serveur')
   throw new Error('Erreur réseau')
 }
 
-// BaseService amélioré
+// 5. Service générique pour CRUD
 class BaseService {
   constructor(path) {
     this.path = path.replace(/\/?$/, '/')
   }
 
-  list = (params = {}) => {
-    return api.get(this.path, { params })
-      .then(r => r.data)
-      .catch(handleError)
-  }
+  list = params =>
+    api.get(this.path, { params }).then(r => r.data).catch(handleError)
 
-  get = (id) => {
-    return api.get(`${this.path}${id}/`)
-      .then(r => r.data)
-      .catch(handleError)
-  }
+  get = id =>
+    api.get(`${this.path}${id}/`).then(r => r.data).catch(handleError)
 
-  create = (data) => {
-    return api.post(this.path, data)
-      .then(r => r.data)
-      .catch(handleError)
-  }
+  create = data =>
+    api.post(this.path, data).then(r => r.data).catch(handleError)
 
-  update = (id, data) => {
-    return api.patch(`${this.path}${id}/`, data)
-      .then(r => r.data)
-      .catch(handleError)
-  }
+  update = (id, data) =>
+    api.patch(`${this.path}${id}/`, data).then(r => r.data).catch(handleError)
 
-  delete = (id) => {
-    return api.delete(`${this.path}${id}/`)
-      .then(r => r.data)
-      .catch(handleError)
-  }
+  delete = id =>
+    api.delete(`${this.path}${id}/`).then(r => r.data).catch(handleError)
 }
 
-// AuthService amélioré
+// 6. AuthService pour l’authentification & tokens
 class AuthService {
-  me = () => {
-    return api.get('user-details/')
-      .then(r => r.data)
-      .catch(handleError)
+  me = () => api.get('user-details/').then(r => r.data).catch(handleError)
+
+  login = async creds => {
+    const { data } = await api.post('auth/token/', creds)
+    await tokenStorage.setAccess(data.access)
+    await tokenStorage.setRefresh(data.refresh)
+    return data
   }
 
-  login = async (creds) => {
-    try {
-      const { data } = await api.post('auth/token/', creds)
-      await tokenStorage.setAccess(data.access)
-      await tokenStorage.setRefresh(data.refresh)
-      return data
-    } catch (error) {
-      handleError(error)
-      throw error
-    }
-  }
-
-  refresh = async () => {
-    try {
-      const refreshToken = await tokenStorage.getRefresh()
-      const { data } = await api.post('auth/token/refresh/', { refresh: refreshToken })
-      await tokenStorage.setAccess(data.access)
-      return data.access
-    } catch (error) {
-      handleError(error)
-      throw error
-    }
-  }
-
-  register = (data) => {
-    return api.post('auth/register/', data)
-      .then(r => r.data)
-      .catch(handleError)
-  }
+  register = data =>
+    api.post('auth/register/', data).then(r => r.data).catch(handleError)
 
   logout = async () => {
-    try {
-      const refreshToken = await tokenStorage.getRefresh()
-      await api.post('auth/logout/', { refresh: refreshToken })
-      await tokenStorage.clear()
-    } catch (error) {
-      handleError(error)
-      throw error
-    }
+    const refresh = await tokenStorage.getRefresh()
+    await api.post('auth/logout/', { refresh })
+    await tokenStorage.clear()
   }
 }
 
-// Services spécifiques
+// 7. Export de nos services
 export const API = {
   auth: new AuthService(),
   etudiant: new BaseService('etudiants'),
@@ -232,5 +155,6 @@ export const API = {
   recu: new BaseService('recus'),
   notification: new BaseService('notifications'),
   personnel: new BaseService('personnels'),
+    vendeurtickets: new BaseService('vendeurtickets'),
   utilisateur: new BaseService('utilisateurs'),
 }
