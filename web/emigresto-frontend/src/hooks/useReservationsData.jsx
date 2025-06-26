@@ -1,15 +1,16 @@
-// src/hooks/useReservationsData.js (Exemple de construction de reservationsMap)
+// src/hooks/useReservationsData.js
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import { API } from "../services/apiService"; // Assurez-vous que le chemin est correct
+ // Assuming you use react-toastify for notifications
 
 const useReservationsData = () => {
   const [etudiants, setEtudiants] = useState([]);
   const [jours, setJours] = useState([]);
   const [periodes, setPeriodes] = useState([]);
-  const [reservationsBrutes, setReservationsBrutes] = useState([]); // Nouveau: pour stocker les données brutes
+  const [reservationsBrutes, setReservationsBrutes] = useState([]); // Pour stocker les données brutes
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -24,10 +25,6 @@ const useReservationsData = () => {
     const dayOfWeek = today.getDay(); // 0 pour Dimanche, 1 pour Lundi, etc.
     const currentDayId = dayOfWeek === 0 ? 7 : dayOfWeek; // Adapter pour Jours: 1=Lun, 7=Dim
 
-    // Calculer le décalage pour atteindre le jour de la semaine correspondant à jourId
-    // Par exemple, si aujourd'hui est Mardi (ID 2) et jourId est Jeudi (ID 4), le décalage est +2.
-    // Si aujourd'hui est Vendredi (ID 5) et jourId est Lundi (ID 1), le décalage est 1 - 5 = -4,
-    // puis +7 pour la semaine suivante = +3.
     let diff = jourId - currentDayId;
     if (diff < 0) {
       diff += 7; // Si le jour est passé cette semaine, prendre celui de la semaine prochaine
@@ -49,12 +46,12 @@ const useReservationsData = () => {
           API.etudiant.list({ page_size: 500 }),
           API.jour.list({ page_size: 7 }),
           API.periode.list({ page_size: 50 }),
-          API.reservation.list({ page_size: 1000,}),// Récupérer toutes les réservations
+          API.reservation.list({ page_size: 1000 }), // Récupérer toutes les réservations
         ]);
 
         setEtudiants(etuRes.results);
-        setJours(jourRes.results.sort((a, b) => a.id - b.id)); // S'assurer que les jours sont triés par ID
-        setPeriodes(periRes.results.sort((a, b) => a.id - b.id)); // S'assurer que les périodes sont triées par ID
+        setJours(jourRes.results.sort((a, b) => a.id - b.id));
+        setPeriodes(periRes.results.sort((a, b) => a.id - b.id));
         setReservationsBrutes(resaRes.results); // Stocker les réservations brutes
       } catch (err) {
         console.error("Erreur lors du chargement des données :", err);
@@ -70,29 +67,29 @@ const useReservationsData = () => {
   const reservationsMap = useMemo(() => {
     const map = new Map();
     reservationsBrutes.forEach((r) => {
-      // Pour la date de la réservation, nous utilisons la date réelle de la réservation
-      // et la comparons avec la date calculée pour la semaine actuelle
-      const reservationDate = new Date(r.date);
-      reservationDate.setHours(0, 0, 0, 0);
+      // --- NOUVEAU: Filtrer par statut 'VALIDE' ---
+      if (r.statut === 'VALIDE') { // <--- AJOUTEZ CETTE LIGNE
+        const reservationDate = new Date(r.date);
+        reservationDate.setHours(0, 0, 0, 0);
 
-      const targetJourDate = new Date(getReservationDate(r.jour.id));
-      targetJourDate.setHours(0, 0, 0, 0);
+        const targetJourDate = new Date(getReservationDate(r.jour.id));
+        targetJourDate.setHours(0, 0, 0, 0);
 
-      // Si la réservation correspond au jour de la semaine *actuelle*
-      // C'est ici que se fait la magie pour n'afficher que les réservations de la semaine en cours.
-      // Assurez-vous que les IDs de jour correspondent aux IDs de la base de données (1=Lundi, etc.)
-      if (
-        r.jour.id &&
-        r.periode.id &&
-        r.etudiant?.id &&
-        reservationDate.getTime() === targetJourDate.getTime()
-      ) {
-        if (!map.has(r.etudiant.id)) {
-          map.set(r.etudiant.id, new Map());
+        // Si la réservation correspond au jour de la semaine *actuelle*
+        if (
+          r.jour.id &&
+          r.periode.id &&
+          r.etudiant?.id && // Utilisez r.etudiant.id pour l'initiateur
+          reservationDate.getTime() === targetJourDate.getTime()
+        ) {
+          if (!map.has(r.etudiant.id)) {
+            map.set(r.etudiant.id, new Map());
+          }
+          const studentReservations = map.get(r.etudiant.id);
+          // Utilisez une clé unique pour chaque cellule de réservation (jour-période)
+          studentReservations.set(`${r.jour.id}-${r.periode.id}`, r); 
         }
-        const studentReservations = map.get(r.etudiant.id);
-        studentReservations.set(`${r.jour.id}-${r.periode.id}`, r); // Stocke l'objet réservation entier si nécessaire
-      }
+      } // <--- FIN DE LA CONDITION STATUT
     });
     return map;
   }, [reservationsBrutes, getReservationDate]); // Recalculer quand les réservations brutes ou les dates des jours changent
@@ -113,7 +110,6 @@ const useReservationsData = () => {
   const sortedEtudiants = useMemo(() => {
     if (!sortBy) return filteredEtudiants;
     return [...filteredEtudiants].sort((a, b) => {
-      // Adapter ici si vos clés de tri sont différentes
       if (sortBy === "idEtudiant") return a.id - b.id;
       if (sortBy === "nomEtudiant")
         return a.nom.localeCompare(b.nom, undefined, { sensitivity: "base" });
@@ -140,34 +136,43 @@ const useReservationsData = () => {
       const currentReservationsForStudent =
         reservationsMap.get(etudiantId) || new Map();
       const key = `${jourId}-${periodeId}`;
-      const existingReservation = currentReservationsForStudent.get(key);
+      const existingReservation = currentReservationsForStudent.get(key); // This will be a VALIDE reservation if it exists in the map
 
       const reservationDate = getReservationDate(jourId); // La date spécifique du jour de la semaine
 
       try {
         if (existingReservation) {
-          // Annuler la réservation existante
-          await API.reservation.delete(existingReservation.id);
-          // Mettre à jour l'état local après suppression
-          setReservationsBrutes((prev) =>
-            prev.filter((r) => r.id !== existingReservation.id)
-          );
+          // --- CHANGEMENT CRUCIAL: Passer à la soft delete (ANNULE) ---
+          // Annuler la réservation existante en changeant son statut
+          const payload = {
+            statut: 'ANNULE',
+            // Include other necessary fields if your backend requires them for PATCH
+            // e.g., 'jour': jourId, 'periode': periodeId, 'date': reservationDate, 'etudiant': etudiantId
+            // but usually for status change, only statut is enough if ID is in URL
+          };
+          await API.reservation.partial_update(existingReservation.id, payload);
           toast.success("Réservation annulée !");
         } else {
-          // Créer une nouvelle réservation
+          // Créer une nouvelle réservation ou réactiver une existante (géré par le backend)
+          // Le backend (via ReservationCreateSerializer.create) gérera la réactivation
+          // d'une réservation ANNULEE pour le même initiateur/date/periode.
           const newReservationData = {
-            etudiant: etudiantId, // C'est l'ID de l'étudiant
+            etudiant: etudiantId, // C'est l'ID de l'étudiant initiateur
             jour: jourId,
             periode: periodeId,
             date: reservationDate,
-            heure: "12:00:00", // Ou une heure par défaut si non pertinente
-            statut: "VALIDE",
+            heure: "12:00:00", 
+            // statut: "VALIDE", // Le backend mettra par défaut 'VALIDE' ou réactivera
           };
-          const resp = await API.reservation.create(newReservationData);
-          // Mettre à jour l'état local après création
-          setReservationsBrutes((prev) => [...prev, resp]); // Assurez-vous que `resp` contient l'objet réservation complet
+          await API.reservation.create(newReservationData);
           toast.success("Réservation effectuée !");
         }
+        
+        // Après chaque opération (annulation ou création), rafraîchir les données brutes
+        // pour que `reservationsMap` soit recalculée avec les données à jour
+        const resaRes = await API.reservation.list({ page_size: 1000 });
+        setReservationsBrutes(resaRes.results);
+
       } catch (err) {
         console.error("Erreur lors de la mise à jour de la réservation :", err);
         toast.error(
@@ -191,36 +196,36 @@ const useReservationsData = () => {
         )
       );
 
-      // Récupérer la date actuelle pour le jour de la semaine
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const actions = []; // Pour stocker les promesses de suppression/création
+      const actions = []; 
 
       for (const jour of jours) {
         const dateForJour = new Date(getReservationDate(jour.id));
         dateForJour.setHours(0, 0, 0, 0);
         const isPast = dateForJour < today;
 
-        if (isPast) continue; // Ne pas modifier les réservations passées
+        if (isPast) continue;
 
         for (const periode of periodes) {
           const key = `${jour.id}-${periode.id}`;
-          const existingReservation = studentReservations.get(key);
+          const existingReservation = studentReservations.get(key); // This will be a VALIDE reservation from the map
 
           if (allChecked && existingReservation) {
-            // Tout est coché, donc on décoche tout (supprime)
-            actions.push(API.reservation.delete(existingReservation.id));
+            // Tout est coché (VALIDE), donc on décoche tout (ANNULE)
+            actions.push(
+                API.reservation.partial_update(existingReservation.id, { statut: 'ANNULE' })
+            );
           } else if (!allChecked && !existingReservation) {
-            // Pas tout coché, on coche tout (crée)
+            // Pas tout coché (manque des VALIDE), on coche tout (crée/réactive)
             actions.push(
               API.reservation.create({
                 etudiant: etudiantId,
                 jour: jour.id,
                 periode: periode.id,
-                date: getReservationDate(jour.id), // Date spécifique pour ce jour
+                date: getReservationDate(jour.id), 
                 heure: "12:00:00",
-                statut: "VALIDE",
               })
             );
           }
@@ -256,8 +261,8 @@ const useReservationsData = () => {
       jours.forEach((j) => {
         let s = "";
         periodes.forEach((p) => {
-          const key = `${j.id}-${p.id}`; // Clé correcte pour la map de l'étudiant
-          const isReserved = reservationsMap.get(e.id)?.has(key);
+          const key = `${j.id}-${p.id}`; 
+          const isReserved = reservationsMap.get(e.id)?.has(key); // Check only active reservations
           s += isReserved ? "✔ " : "✘ ";
         });
         row.push(s.trim());
@@ -271,7 +276,7 @@ const useReservationsData = () => {
   const handleKeyDown = useCallback(
     (e, etudiantId, jourId, periodeId) => {
       if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault(); // Empêche le défilement de la page avec la barre d'espace
+        e.preventDefault(); 
         toggleReservation(etudiantId, jourId, periodeId);
       }
     },

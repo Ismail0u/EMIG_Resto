@@ -57,7 +57,7 @@ function GuichetLayout({ title, children }) {
     <div className="h-screen flex">
       <Sidebar menuItems={menuR} userOptions={userR} />
       <div className="flex-1 flex flex-col">
-        <Header h_title={title} h_user="Guichetier" h_role="Guichet" />
+        <Header h_title={title} h_user="Responsable de Guichet" h_role="Responsable de guichet" />
         <main className="flex-1 overflow-auto p-6 bg-gray-100">
           {children}
         </main>
@@ -109,7 +109,7 @@ export default function App() {
             path="/"
             element={
               <PrivateRoute>
-                <GuichetLayout title="Dashboard Guichet">
+                <GuichetLayout title="Dashboard">
                   <DashboardGuichet />
                 </GuichetLayout>
               </PrivateRoute>

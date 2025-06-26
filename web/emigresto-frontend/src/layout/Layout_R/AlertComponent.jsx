@@ -17,7 +17,6 @@ export default function AlertComponent() {
           .map(r => {
             const mat = r.etudiant?.matricule || 'Inconnu'
             if (r.statut === 'ANNULE') return `❌ Réservation annulée pour ${r.etudiant?.nom} ${r.etudiant?.prenom} (${mat})`
-            if (r.statut === 'VALIDE') return `✅ Réservation confirmée pour ${r.etudiant?.nom} ${r.etudiant?.prenom} (${mat})`
             return null
           })
           .filter(Boolean)

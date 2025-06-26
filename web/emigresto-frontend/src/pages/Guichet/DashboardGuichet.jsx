@@ -3,7 +3,8 @@ import React, { useEffect, useState } from 'react'
 import AlertComponent from '../../layout/Layout_R/AlertComponent'
 import CalendarComponent from '../../layout/Layout_R/CalendarComponent'
 import GraphComponent from '../../layout/Layout_R/GraphComponent'
-import HistoryComponent from '../../layout/Layout_R/HistoryComponent'
+//import HistoryComponent from '../../layout/Layout_R/HistoryComponent'
+import CommunicationPanel from '../../layout/Layout_R/CommunicationPanel'
 import { API } from '../../services/apiService'
 
 const joursSemaine = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"]
@@ -101,7 +102,7 @@ export default function Dashboard() {
         {/* Card 2 : Historique */}
         <div className="row-span-3 bg-white col-span-3 shadow-md rounded-lg p-3 flex flex-col overflow-hidden">
           <div className="flex-1">
-            <HistoryComponent />
+            <CommunicationPanel />
           </div>
         </div>
 

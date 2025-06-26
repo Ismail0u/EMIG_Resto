@@ -13,7 +13,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 const getWeek = () => {
   const today = new Date()
   const monday = new Date(today)
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7)) // Adjust to Monday (0 for Sunday, 1 for Monday...)
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
@@ -29,14 +29,23 @@ export default function GraphComponent() {
 
   useEffect(() => {
     API.reservation.list()
-      .then(res => setDataSet(res.results))
-      .catch(() => {
-        // Gérer l'erreur si nécessaire, par exemple avec un état d'erreur
+      .then(res => {
+        // --- IMPORTANT CHANGE: Filter for VALIDE status here ---
+        setDataSet(res.results.filter(r => r.statut === 'VALIDE')); // <--- ADDED FILTER
+      })
+      .catch((err) => {
+        console.error("Error fetching graph data:", err);
+        // Gérer l'erreur si nécessaire, par exemple avec un état
       })
   }, [])
 
-  const counts = weekDates.map(date =>
-    dataSet.filter(r => r.date === date).length
+  // Calcul du nombre de réservations par jour de la semaine
+  const counts = days.map((dayName, index) =>
+    dataSet.filter(r => {
+      const reservationDate = new Date(r.date);
+      const dayOfWeek = (reservationDate.getDay() + 6) % 7; // 0 for Mon, 6 for Sun
+      return dayOfWeek === index;
+    }).length
   )
 
   const data = {
@@ -81,14 +90,9 @@ export default function GraphComponent() {
     },
   }
 
-  // Le conteneur parent doit être flex et le div du graphique doit avoir flex-1 et relative
   return (
-    <div className="flex flex-col h-full"> {/* Ajout de flex-col et h-full */}
-      {/* Ce div contient le graphique et utilise flex-1 pour prendre l'espace disponible */}
-      {/* et relative pour que le graphique puisse se positionner si besoin */}
-      <div className="flex-1 relative">
-        <Line data={data} options={options} />
-      </div>
+    <div className="flex flex-col h-full">
+      <Line data={data} options={options} />
     </div>
   )
 }
