@@ -109,8 +109,10 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
         const dateObj = new Date();
         dateObj.setDate(today.getDate() + daysUntil);
         const formattedDate = format(dateObj, 'yyyy-MM-dd');
+        const userId = await AsyncStorage.getItem('user_id'); // ← stocké au login
 
         const reservation = {
+          reservant_pour: parseInt(userId), // ← obligatoire !
           jour: dayNumber,
           periode: mealToId[selectedMeal],
           date: formattedDate,

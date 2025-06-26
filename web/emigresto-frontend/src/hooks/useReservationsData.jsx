@@ -74,20 +74,20 @@ const useReservationsData = () => {
 
         const targetJourDate = new Date(getReservationDate(r.jour.id));
         targetJourDate.setHours(0, 0, 0, 0);
+        const keyId = r.reservant_pour.id;
 
         // Si la réservation correspond au jour de la semaine *actuelle*
         if (
           r.jour.id &&
           r.periode.id &&
-          r.etudiant?.id && // Utilisez r.etudiant.id pour l'initiateur
+          r.reservant_pour?.id && // Utilisez r.etudiant.id pour l'initiateur
           reservationDate.getTime() === targetJourDate.getTime()
         ) {
-          if (!map.has(r.etudiant.id)) {
-            map.set(r.etudiant.id, new Map());
+          if (!map.has(keyId)) {
+            map.set(keyId, new Map());
           }
-          const studentReservations = map.get(r.etudiant.id);
           // Utilisez une clé unique pour chaque cellule de réservation (jour-période)
-          studentReservations.set(`${r.jour.id}-${r.periode.id}`, r); 
+          map.get(keyId).set(`${r.jour.id}-${r.periode.id}`, r); 
         }
       } // <--- FIN DE LA CONDITION STATUT
     });
@@ -157,7 +157,7 @@ const useReservationsData = () => {
           // Le backend (via ReservationCreateSerializer.create) gérera la réactivation
           // d'une réservation ANNULEE pour le même initiateur/date/periode.
           const newReservationData = {
-            etudiant: etudiantId, // C'est l'ID de l'étudiant initiateur
+            reservant_pour: etudiantId, // C'est l'ID de l'étudiant initiateur
             jour: jourId,
             periode: periodeId,
             date: reservationDate,
@@ -221,7 +221,7 @@ const useReservationsData = () => {
             // Pas tout coché (manque des VALIDE), on coche tout (crée/réactive)
             actions.push(
               API.reservation.create({
-                etudiant: etudiantId,
+                reservant_pour: etudiantId,
                 jour: jour.id,
                 periode: periode.id,
                 date: getReservationDate(jour.id), 
