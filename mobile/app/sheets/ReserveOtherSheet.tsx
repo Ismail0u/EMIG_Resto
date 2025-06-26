@@ -149,7 +149,7 @@ const ReserveOtherSheet: React.FC<ReserveOtherSheetProps> = ({
       }
     } catch (err: any) {
       console.error("Erreur inattendue:", err);
-      setErrorMessage(err.message || 'Une erreur inattendue est survenue.');
+      setErrorMessage(err.message || 'Une erreur inattendue est survenue !.');
       setIsFailureVisible(true);
     } finally {
       setLoading(false);
