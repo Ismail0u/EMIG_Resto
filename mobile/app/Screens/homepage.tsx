@@ -358,17 +358,29 @@ const fetchReservations = useCallback(async () => {
           >
             TICKETS RESTANTS
           </Text>
-          <Text
-            style={{
-              color: 'black',
-              fontWeight: 'bold',
-              fontSize: r.ticketsBoxAmountFontSize,
-              textAlign: 'center',
-              marginTop: r.ticketsBoxSpaceY / 2,
-            }}
-          >
-            {userData?.nombre_tickets || '0'} TICKETS
-          </Text>
+          {/* Affichage séparé des deux quotas */}
+  <Text
+    style={{
+      color: 'black',
+      fontWeight: 'bold',
+      fontSize: r.ticketsBoxAmountFontSize,
+      textAlign: 'center',
+      marginTop: r.ticketsBoxSpaceY / 2,
+    }}
+  >
+    petit-dejeuner : {userData?.ticket_quota_80 ?? 0}
+  </Text>
+  <Text
+    style={{
+      color: 'black',
+      fontWeight: 'bold',
+      fontSize: r.ticketsBoxAmountFontSize,
+      textAlign: 'center',
+      marginTop: 4,
+    }}
+  >
+    Dej/Diner: {userData?.ticket_quota_125 ?? 0}
+  </Text>
         </View>
 
         <Text

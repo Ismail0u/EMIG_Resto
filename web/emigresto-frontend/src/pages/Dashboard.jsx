@@ -20,8 +20,8 @@ export default function DashboardVendeur() {
     queryKey: ['dashboardStats'],
     queryFn: async () => {
       const [paiementsRes, ticketsRes] = await Promise.all([
-        API.paiement.list(),
-        API.ticket.list(),
+        API.paiement.list({ page_size: 1000 }),
+        API.ticket.list({ page_size: 1000 }),
       ])
       const ventes = paiementsRes.results || []
       const tickets = ticketsRes.results || []

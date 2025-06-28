@@ -1,14 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { Alert, Text, TextInput, TouchableOpacity, View, Image } from 'react-native';
-import Modal from 'react-native-modal'; // <-- Assurez-vous que cette importation est bien présente
+import { Alert, Text, TextInput, Pressable, View, Image, Platform } from 'react-native';
+import Modal from 'react-native-modal';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false); // Gardé pour désactiver le bouton pendant le chargement
-  const [isFullScreenLoading, setIsFullScreenLoading] = useState(false); // Nouvel état pour l'écran de chargement
+  const [isFullScreenLoading, setIsFullScreenLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -16,62 +15,125 @@ export default function Login() {
       return;
     }
 
-    setIsFullScreenLoading(true); // Afficher l'écran de chargement plein écran
-    setLoading(true); // Désactiver le bouton pour éviter les clics multiples
+    setIsFullScreenLoading(true);
+
+    // Données à envoyer - ajout de debug
+    const loginData = { email, password };
+    console.log('📤 Données envoyées:', loginData);
 
     try {
+      // Étape 1: Authentification avec plus de debug
+      console.log('🚀 Tentative de connexion à:', 'http://127.0.0.1:8000/api/auth/token/');
+      
       const response = await fetch('http://127.0.0.1:8000/api/auth/token/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify(loginData),
       });
 
-      const data = await response.json();
+      console.log('📊 Status de la réponse:', response.status);
+      console.log('📊 Headers de la réponse:', response.headers);
 
-      if (response.ok) {
-        Alert.alert('Succès', 'Connexion réussie!');
-        await AsyncStorage.setItem('access_token', data.access);
-        await AsyncStorage.setItem('refreshToken', data.refresh);
-          // NOUVEAU : récupérer l'ID de l'étudiant connecté
-        const userDetailsResponse = await fetch('http://127.0.0.1:8000/api/user-details/', {
-          headers: {
-           'Authorization': `Bearer ${data.access}`,
-           'Content-Type': 'application/json',
-          },
-         });
+      // Lire la réponse comme texte d'abord pour débugger
+      const responseText = await response.text();
+      console.log('📄 Réponse brute du serveur:', responseText);
 
-        const userDetails = await userDetailsResponse.json();
-          // Stocker l'ID de l'étudiant (reservant_pour)
-        if (userDetails?.id) { // Access the 'id' directly from userDetails
-  await AsyncStorage.setItem('user_id', String(userDetails.id));
-  await AsyncStorage.setItem('user_email', userDetails.email); // Good to store email too
-} else {
-  Alert.alert('Erreur', "Impossible de récupérer l'identifiant étudiant. (ID manquant)");
-  setIsFullScreenLoading(false); // Make sure to hide loading on error
-  setLoading(false);
-  return;
-}
-router.replace('/Screens/homepage'); // Use router.replace to prevent going back to login
-      } else {
-        Alert.alert('Erreur de connexion', data.detail || JSON.stringify(data) || 'Identifiants incorrects.');
+      let data;
+      try {
+        data = JSON.parse(responseText);
+        console.log('✅ Données parsées:', data);
+      } catch (parseError) {
+        console.error('❌ Erreur de parsing JSON:', parseError);
+        throw new Error(`Réponse invalide du serveur: ${responseText}`);
       }
+
+      if (!response.ok) {
+        // Log détaillé de l'erreur
+        console.error('❌ Erreur serveur:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
+        
+        // Messages d'erreur plus spécifiques
+        if (response.status === 400) {
+          throw new Error(data.detail || data.message || 'Données invalides. Vérifiez vos identifiants.');
+        } else if (response.status === 401) {
+          throw new Error('Identifiants incorrects.');
+        } else if (response.status === 404) {
+          throw new Error('Service de connexion non trouvé.');
+        } else {
+          throw new Error(data.detail || `Erreur serveur (${response.status})`);
+        }
+      }
+
+      console.log('✅ Connexion réussie, tokens reçus');
+
+      // Étape 2: Récupération des détails utilisateur
+      console.log('🔍 Récupération des détails utilisateur...');
+      
+      const userDetailsResponse = await fetch('http://127.0.0.1:8000/api/user-details/', {
+        headers: {
+          'Authorization': `Bearer ${data.access}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+      });
+
+      console.log('📊 Status user-details:', userDetailsResponse.status);
+
+      if (!userDetailsResponse.ok) {
+        const errorText = await userDetailsResponse.text();
+        console.error('❌ Erreur user-details:', errorText);
+        throw new Error('Impossible de récupérer les détails utilisateur.');
+      }
+
+      const userDetails = await userDetailsResponse.json();
+      console.log('👤 Détails utilisateur:', userDetails);
+
+      if (!userDetails?.id) {
+        console.error('❌ ID utilisateur manquant dans:', userDetails);
+        throw new Error('Identifiant utilisateur manquant.');
+      }
+
+      // Étape 3: Stockage des données
+      console.log('💾 Stockage des données...');
+      await AsyncStorage.setItem('access_token', data.access);
+      await AsyncStorage.setItem('refreshToken', data.refresh);
+      await AsyncStorage.setItem('user_id', String(userDetails.id));
+      await AsyncStorage.setItem('user_email', userDetails.email);
+
+      console.log('✅ Données stockées avec succès');
+
+      // Étape 4: Navigation
+      console.log('🧭 Navigation vers homepage...');
+      router.replace('/Screens/homepage');
+      
+      setTimeout(() => {
+        setIsFullScreenLoading(false);
+      }, 500);
+
     } catch (error) {
-      console.error('Erreur de connexion:', error);
-      Alert.alert('Erreur', 'Impossible de se connecter. Veuillez vérifier votre connexion ou réessayer.');
-    } finally {
-      setIsFullScreenLoading(false); // Masquer l'écran de chargement
-      setLoading(false); // Réactiver le bouton
+      console.error('💥 Erreur complète:', error);
+      setIsFullScreenLoading(false);
+      
+      Alert.alert(
+        'Erreur de connexion', 
+        error.message || 'Impossible de se connecter. Vérifiez votre connexion.'
+      );
     }
   };
 
   return (
     <View className="flex-1 justify-center items-center bg-white p-4">
-      {/* Conteneur pour le logo et le texte, centré horizontalement */}
+      {/* Conteneur pour le logo et le texte */}
       <View className="items-center mb-6">
-        {/* Vérifiez le chemin du logo PNG */}
         <Image
-          source={require('../icons/emig_logo.png')} // Assurez-vous que ce chemin est correct
-          style={{ width: 100, height: 100, marginBottom: 4 }} // Ajustez width et height selon vos besoins
+          source={require('../icons/emig_logo.png')}
+          style={{ width: 100, height: 100, marginBottom: 4 }}
           resizeMode="contain"
         />
         <Text className="text-2xl font-bold text-[#12A2E1]">Bienvenue sur </Text>
@@ -87,6 +149,7 @@ router.replace('/Screens/homepage'); // Use router.replace to prevent going back
         autoCapitalize="none"
         keyboardType="email-address"
       />
+      
       <TextInput
         placeholder="Mot de passe"
         placeholderTextColor="#C1C1C1"
@@ -96,42 +159,64 @@ router.replace('/Screens/homepage'); // Use router.replace to prevent going back
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity className="mb-4" onPress={() => {}}>
+      <Pressable 
+        className="mb-4" 
+        onPress={() => {}}
+        style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      >
         <Text className="text-right text-sm text-gray-800">Mot de passe oublié ?</Text>
-      </TouchableOpacity>
+      </Pressable>
 
-      <TouchableOpacity
+      <Pressable
         className="bg-[#12A2E1] p-3 rounded-xl mb-4 w-full max-w-xs"
         onPress={handleLogin}
-        disabled={loading}
+        disabled={isFullScreenLoading}
+        style={({ pressed }) => ({
+          opacity: pressed || isFullScreenLoading ? 0.7 : 1
+        })}
       >
         <Text className="text-white text-center font-bold">
-          {loading ? 'CONNEXION EN COURS...' : 'SE CONNECTER'}
+          {isFullScreenLoading ? 'CONNEXION EN COURS...' : 'SE CONNECTER'}
         </Text>
-      </TouchableOpacity>
+      </Pressable>
 
       <Text className="text-center text-sm text-gray-400">
-        Vous n’avez pas de compte ?{' '}
-        <Text className="font-bold text-gray-800" onPress={() => router.push('/Screens/Register')}>
+        Vous n'avez pas de compte ?{' '}
+        <Text 
+          className="font-bold text-gray-800" 
+          onPress={() => router.push('/Screens/Register')}
+        >
           Créer un compte
         </Text>
       </Text>
 
-      {/* <-- MODAL DE CHARGEMENT PLEIN ÉCRAN --> */}
+      {/* Modal de chargement - sans useNativeDriver pour éviter les warnings */}
       <Modal
         isVisible={isFullScreenLoading}
-        animationIn="fadeIn" // Animation d'apparition
-        animationOut="fadeOut" // Animation de disparition
-        useNativeDriver={true} // Recommandé pour de meilleures performances
-        statusBarTranslucent={true} // <-- C'est la propriété clé à ajouter
+        animationIn="fadeIn"
+        animationOut="fadeOut"
+        useNativeDriver={Platform.OS !== 'web'} // Désactiver sur web
+        statusBarTranslucent={true}
+        backdropOpacity={1}
       >
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'white' }}>
+        <View style={{ 
+          flex: 1, 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          backgroundColor: 'white' 
+        }}>
           <Image
-            source={require('../icons/emig_logo.png')} // Votre icône du logo
-            style={{ width: 200, height: 200, marginBottom: 20 }} // Taille plus grande
+            source={require('../icons/emig_logo.png')}
+            style={{ width: 200, height: 200, marginBottom: 20 }}
             resizeMode="contain"
           />
-          <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#12A2E1' }}>Chargement...</Text>
+          <Text style={{ 
+            fontSize: 24, 
+            fontWeight: 'bold', 
+            color: '#12A2E1' 
+          }}>
+            Chargement...
+          </Text>
         </View>
       </Modal>
     </View>

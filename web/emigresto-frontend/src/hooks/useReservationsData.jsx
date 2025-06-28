@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { jsPDF } from "jspdf";
+import { toast } from "react-hot-toast";
 import autoTable from "jspdf-autotable"; 
 import { API } from "../services/apiService"; // Assurez-vous que le chemin est correct
 
@@ -21,24 +22,21 @@ const useReservationsData = () => {
   // Dates pour la semaine courante, calculées dynamiquement
   const getReservationDate = useCallback((jourId) => {
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 pour Dimanche, 1 pour Lundi, etc.
-    const currentDayId = dayOfWeek === 0 ? 7 : dayOfWeek; // Adapter pour Jours: 1=Lun, 7=Dim
-
-    // Calculer le décalage pour atteindre le jour de la semaine correspondant à jourId
-    // Par exemple, si aujourd'hui est Mardi (ID 2) et jourId est Jeudi (ID 4), le décalage est +2.
-    // Si aujourd'hui est Vendredi (ID 5) et jourId est Lundi (ID 1), le décalage est 1 - 5 = -4,
-    // puis +7 pour la semaine suivante = +3.
-    let diff = jourId - currentDayId;
-    if (diff < 0) {
-      diff += 7; // Si le jour est passé cette semaine, prendre celui de la semaine prochaine
-    }
-
-    const targetDate = new Date(today);
-    targetDate.setDate(today.getDate() + diff);
-
-    // Retourne la date au format YYYY-MM-DD
-    return targetDate.toISOString().split("T")[0];
+    // Obtenir le jour « numérique » 1=Lundi … 7=Dimanche
+    const todayIsoDay = today.getDay() === 0 ? 7 : today.getDay(); 
+  
+    // Calculer la date du Lundi de la semaine courante
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - (todayIsoDay - 1));
+  
+    // Ajouter (jourId-1) jours pour arriver au jour voulu
+    const targetDate = new Date(monday);
+    targetDate.setDate(monday.getDate() + (jourId - 1));
+  
+    // Retourne YYYY-MM-DD
+    return targetDate.toISOString().split('T')[0];
   }, []);
+  
 
   useEffect(() => {
     async function fetchData() {
@@ -51,7 +49,8 @@ const useReservationsData = () => {
           API.periode.list({ page_size: 50 }),
           API.reservation.list({ page_size: 1000,}),// Récupérer toutes les réservations
         ]);
-
+        console.log("Etudiants chargés :", etuRes.results);
+        console.log("Réservations brutes :", resaRes.results);
         setEtudiants(etuRes.results);
         setJours(jourRes.results.sort((a, b) => a.id - b.id)); // S'assurer que les jours sont triés par ID
         setPeriodes(periRes.results.sort((a, b) => a.id - b.id)); // S'assurer que les périodes sont triées par ID
@@ -70,54 +69,30 @@ const useReservationsData = () => {
   const reservationsMap = useMemo(() => {
     const map = new Map();
     reservationsBrutes.forEach((r) => {
-<<<<<<< HEAD
       // --- NOUVEAU: Filtrer par statut 'VALIDE' ---
         const reservationDate = new Date(r.date);
         reservationDate.setHours(0, 0, 0, 0);
 
         const targetJourDate = new Date(getReservationDate(r.jour.id));
         targetJourDate.setHours(0, 0, 0, 0);
+        if (r.statut !== 'VALIDE') return;   // optionnel : ne garder que les VALIDE
         const keyId = r.reservant_pour.id;
 
         // Si la réservation correspond au jour de la semaine *actuelle*
-        if (
+        /*if (
           r.jour.id &&
           r.periode.id &&
           r.reservant_pour?.id && // Utilisez r.etudiant.id pour l'initiateur
           reservationDate.getTime() === targetJourDate.getTime()
-        ) {
+        ) { */
           if (!map.has(keyId)) {
             map.set(keyId, new Map());
           }
           // Utilisez une clé unique pour chaque cellule de réservation (jour-période)
           map.get(keyId).set(`${r.jour.id}-${r.periode.id}`, r); 
-        }
-=======
-      // Pour la date de la réservation, nous utilisons la date réelle de la réservation
-      // et la comparons avec la date calculée pour la semaine actuelle
-      const reservationDate = new Date(r.date);
-      reservationDate.setHours(0, 0, 0, 0);
-
-      const targetJourDate = new Date(getReservationDate(r.jour.id));
-      targetJourDate.setHours(0, 0, 0, 0);
-
-      // Si la réservation correspond au jour de la semaine *actuelle*
-      // C'est ici que se fait la magie pour n'afficher que les réservations de la semaine en cours.
-      // Assurez-vous que les IDs de jour correspondent aux IDs de la base de données (1=Lundi, etc.)
-      if (
-        r.jour.id &&
-        r.periode.id &&
-        r.etudiant?.id &&
-        reservationDate.getTime() === targetJourDate.getTime()
-      ) {
-        if (!map.has(r.etudiant.id)) {
-          map.set(r.etudiant.id, new Map());
-        }
-        const studentReservations = map.get(r.etudiant.id);
-        studentReservations.set(`${r.jour.id}-${r.periode.id}`, r); // Stocke l'objet réservation entier si nécessaire
-      }
->>>>>>> parent of 23a4dc7c ( Annulation d'une réservation)
+        //}
     });
+    console.log("🔍 reservationsMap entries:", [...map.entries()]);
     return map;
   }, [reservationsBrutes, getReservationDate]); // Recalculer quand les réservations brutes ou les dates des jours changent
 
@@ -180,11 +155,7 @@ const useReservationsData = () => {
         } else {
           // Créer une nouvelle réservation
           const newReservationData = {
-<<<<<<< HEAD
             reservant_pour: etudiantId, // C'est l'ID de l'étudiant initiateur
-=======
-            etudiant: etudiantId, // C'est l'ID de l'étudiant
->>>>>>> parent of 23a4dc7c ( Annulation d'une réservation)
             jour: jourId,
             periode: periodeId,
             date: reservationDate,
@@ -293,11 +264,7 @@ const useReservationsData = () => {
         periodes.forEach((p) => {
           const key = `${j.id}-${p.id}`; // Clé correcte pour la map de l'étudiant
           const isReserved = reservationsMap.get(e.id)?.has(key);
-<<<<<<< HEAD
           s += isReserved ? "O" : "X";
-=======
-          s += isReserved ? "✔ " : "✘ ";
->>>>>>> parent of 23a4dc7c ( Annulation d'une réservation)
         });
         row.push(s.trim());
       });

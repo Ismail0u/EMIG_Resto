@@ -1,88 +1,72 @@
 // src/layout/Layout_R/CalendarComponent.jsx
 import React, { useEffect, useState } from 'react'
 import { Calendar } from 'react-calendar'
-import 'react-calendar/dist/Calendar.css' // S'assurer que le CSS du calendrier est bien importé
+import 'react-calendar/dist/Calendar.css'
 import { API } from '../../services/apiService'
+import { FaCoffee, FaUtensils, FaMoon } from 'react-icons/fa'
 
 export default function CalendarComponent() {
   const [reservations, setReservations] = useState([])
   const [periods, setPeriods] = useState({})
   const [date, setDate] = useState(new Date())
   const [error, setError] = useState(null)
-  const [loading, setLoading] = useState(true); // Added loading state
+  const [loading, setLoading] = useState(true)
 
-  // 🔄 Chargement des données à l'initialisation
   useEffect(() => {
-    setLoading(true); // Start loading
-    setError(null);    // Reset errors
+    setLoading(true)
+    setError(null)
 
-    // Fetch all relevant reservations (assuming page_size might be needed for many)
     Promise.all([
-      API.reservation.list({ page_size: 1000 }), // Ensure all reservations are fetched
-      API.periode.list() // Fetch periods
+      API.reservation.list({ page_size: 1000 }),
+      API.periode.list({ page_size: 50 }),
     ])
-      .then(([resReservations, resPeriodes]) => {
-        setReservations(resReservations.results);
-        const mapping = {};
-        resPeriodes.results.forEach(p => {
-          mapping[p.id] = p.nomPeriode;
-        });
-        setPeriods(mapping);
-        setLoading(false); // End loading
+      .then(([res1, res2]) => {
+        setReservations(res1.results)
+        const map = {}
+        res2.results.forEach(p => {
+          map[p.id] = p.nomPeriode
+        })
+        setPeriods(map)
+        setLoading(false)
       })
       .catch((err) => {
-        setError("❗ Impossible de charger les données du calendrier.");
-        console.error("CalendarComponent fetch error:", err);
-        setLoading(false); // End loading on error
-      });
+        setError("❗ Impossible de charger les données du calendrier.")
+        console.error(err)
+        setLoading(false)
+      })
   }, [])
 
-  // 📅 Filtrage des réservations du jour sélectionné
   const daily = reservations.filter(r =>
     new Date(r.date).toDateString() === date.toDateString()
-  );
+  )
 
-  // Calcul des totaux par type de repas pour la date sélectionnée (DAILY reservations)
-  const totalsByMealType = daily.reduce((acc, r) => {
-    // Check if r.periode exists and has an id.
-    // r.periode is expected to be an object: {id: ..., nomPeriode: ...}
-    if (r.periode && r.periode.id) {
-        // Use the ID to get the name from the 'periods' mapping you created,
-        // or directly use r.periode.nomPeriode if available and reliable.
-        // Using periods[r.periode.id] is safer if r.periode.nomPeriode might be missing or inconsistent.
-        const periodeName = periods[r.periode.id];
+  const totals = daily.reduce((acc, r) => {
+    const nom = periods[r.periode?.id]
+    const lower = nom?.toLowerCase() || ''
+    if (lower.includes('petit')) acc.petitDej = (acc.petitDej || 0) + 1
+    else if (lower.includes('déjeuner')) acc.dejeuner = (acc.dejeuner || 0) + 1
+    else if (lower.includes('diner') || lower.includes('dîner')) acc.diner = (acc.diner || 0) + 1
+    return acc
+  }, { petitDej: 0, dejeuner: 0, diner: 0 })
 
-        if (periodeName) { // Make sure the period name was found
-            const lowerCasePeriodeName = periodeName.toLowerCase();
-            if (lowerCasePeriodeName.includes('petit-déjeuner')) {
-                acc.petitDej = (acc.petitDej || 0) + 1;
-            } else if (lowerCasePeriodeName.includes('déjeuner')) {
-                acc.dejeuner = (acc.dejeuner || 0) + 1;
-            } else if (lowerCasePeriodeName.includes('diner')) {
-                acc.diner = (acc.diner || 0) + 1;
-            }
-        }
-    }
-    return acc;
-  }, { petitDej: 0, dejeuner: 0, diner: 0 });
-
-  // 🔄 Regroupement des réservations par période pour l'affichage détaillé
   const byPeriod = daily.reduce((acc, r) => {
-    // Ensure r.periode is an object and has an ID
-    if (r.periode && r.periode.id) {
-        acc[r.periode.id] = (acc[r.periode.id] || []);
-        acc[r.periode.id].push(r);
-    }
-    return acc;
-  }, {});
+    const pid = r.periode?.id
+    if (!pid) return acc
+    acc[pid] = acc[pid] || []
+    acc[pid].push(r)
+    return acc
+  }, {})
 
-  // Add loading screen
+  const getIcon = (name) => {
+    const n = name?.toLowerCase()
+    if (n?.includes('petit')) return <FaCoffee className="inline mr-1 text-yellow-600" />
+    if (n?.includes('déjeuner')) return <FaUtensils className="inline mr-1 text-green-600" />
+    if (n?.includes('diner') || n?.includes('dîner')) return <FaMoon className="inline mr-1 text-purple-600" />
+    return null
+  }
+
   if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-gray-500">
-        Chargement du calendrier...
-      </div>
-    );
+    return <div className="flex-1 flex items-center justify-center text-gray-500">Chargement du calendrier...</div>
   }
 
   return (
@@ -93,7 +77,7 @@ export default function CalendarComponent() {
         </div>
       )}
 
-      {/* 📅 Calendrier interactif */}
+      {/* 📅 Calendrier */}
       <div className="mb-4 flex-shrink-0">
         <Calendar
           onChange={setDate}
@@ -113,64 +97,67 @@ export default function CalendarComponent() {
         />
       </div>
 
-      {/* Vos styles CSS spécifiques pour rendre le calendrier plus petit - PRÉSERVÉS */}
+      {/* Style réduit du calendrier */}
       <style jsx>{`
-        /* Réduction de la taille générale du calendrier */
         .smaller-calendar {
-          font-size: 0.75rem; /* Réduit la taille de police globale */
+          font-size: 0.75rem;
         }
-        /* Réduction du padding des cellules de jour */
         .smaller-calendar .react-calendar__tile {
-          padding: 0.25em 0.5em; /* Padding réduit */
+          padding: 0.25em 0.5em;
         }
-        /* Ajustement des entêtes des jours de la semaine */
         .smaller-calendar .react-calendar__month-view__weekdays__weekday abbr {
-          text-decoration: none; /* Enlève le soulignement sur les abréviations */
-          font-size: 0.65rem; /* Encore plus petit pour les jours de la semaine */
+          text-decoration: none;
+          font-size: 0.65rem;
           font-weight: bold;
         }
-        /* Ajustement des titres de navigation */
         .smaller-calendar .react-calendar__navigation button {
-          font-size: 0.8rem; /* Taille de police pour les boutons de navigation (mois/année) */
-          min-width: 2em; /* Réduit la largeur minimale des boutons de navigation */
+          font-size: 0.8rem;
+          min-width: 2em;
         }
-        /* Espacement entre les mois/années dans la navigation */
         .smaller-calendar .react-calendar__navigation__label {
-            font-size: 0.8rem;
+          font-size: 0.8rem;
         }
-        /* Ajuster les marges pour les flèches de navigation */
         .smaller-calendar .react-calendar__navigation button.react-calendar__navigation__arrow {
-            padding: 0.2em; /* Réduit le padding des flèches */
+          padding: 0.2em;
         }
       `}</style>
 
-      {/* Détails des réservations pour la date sélectionnée */}
-      {/* Les classes de taille de texte Tailwind sont conservées comme dans votre version */}
-      <div className=" flex-1 overflow-y-auto pr-2 text-xs">
-        <h3 className="font-semibold text-gray-700 text-sm mb-4">
+      {/* 🔎 Détails du jour sélectionné */}
+      <div className="flex-1 overflow-y-auto pr-2 text-xs">
+        <h3 className="font-semibold text-gray-700 text-sm mb-3">
           Réservations du {date.toLocaleDateString()}
         </h3>
 
-        {/* Affichage du récapitulatif des totaux */}
         {daily.length > 0 ? (
-          <div className="mb-4 p-3 bg-blue-50 rounded-md mt-2">
-            <h4 className="font-semibold text-blue-800 text-xs mb-2">Récapitulatif des réservations:</h4>
-            <p className="text-gray-700 text-base">
-              Petit-déjeuner: <span className="font-bold">{totalsByMealType.petitDej}</span>
-            </p>
-            <p className="text-gray-700 text-base">
-              Déjeuner: <span className="font-bold">{totalsByMealType.dejeuner}</span>
-            </p>
-            <p className="text-gray-700 text-base">
-              Dîner: <span className="font-bold">{totalsByMealType.diner}</span>
-            </p>
-          </div>
-        ) : (
-          <p className="p-3 text-gray-500 text-xs">Aucune réservation pour cette date.</p>
-        )}
+          <>
+            <div className="mb-4 p-3 bg-blue-50 rounded-md">
+              <h4 className="font-semibold text-blue-800 text-xs mb-2">Récapitulatif :</h4>
+              <ul className="space-y-1 text-sm">
+                <li>🍞 Petit-déjeuner : <span className="font-bold">{totals.petitDej}</span></li>
+                <li>🥗 Déjeuner : <span className="font-bold">{totals.dejeuner}</span></li>
+                <li>🌙 Dîner : <span className="font-bold">{totals.diner}</span></li>
+              </ul>
+            </div>
 
-       
-        
+            {/* 🔄 Réservations par période */}
+            {Object.entries(byPeriod).map(([pid, list]) => (
+              <div key={pid} className="mb-3">
+                <h4 className="font-semibold text-indigo-600 text-sm mb-1">
+                  {getIcon(periods[pid])} {periods[pid]} ({list.length})
+                </h4>
+                <ul className="ml-4 list-disc text-gray-700 text-sm">
+                  {list.map(r => (
+                    <li key={r.id}>
+                      {r.reservant_pour?.nom} {r.reservant_pour?.prenom} ({r.reservant_pour?.matricule})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </>
+        ) : (
+          <p className="text-gray-500 text-sm">Aucune réservation pour cette date.</p>
+        )}
       </div>
     </div>
   )

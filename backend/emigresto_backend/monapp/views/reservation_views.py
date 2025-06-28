@@ -1,34 +1,40 @@
-# monapp/views/reservation_viewset.py
+# reservation_views.py - Version corrigée
+from datetime import timedelta
+from django.utils import timezone
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from django.utils import timezone
-from datetime import timedelta
-<<<<<<< HEAD
 from ..models.reservations import Reservation
 from ..serializers.reservation_serializer import (
     ReservationSerializer,
     ReservationCreateSerializer
 )
-=======
-from rest_framework import viewsets, permissions
-from monapp.models.reservations import Reservation
-from monapp.serializers.reservation_serializer import ReservationSerializer, ReservationCreateSerializer
->>>>>>> parent of 23a4dc7c ( Annulation d'une réservation)
+
+# Liste des rôles qui doivent voir *toutes* les résas
+FULL_ACCESS_ROLES = {
+    'ADMIN',
+    'RESPONSABLE_GUICHET',
+    # tu peux y ajouter d'autres rôles plus tard...
+}
 
 class ReservationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        today = timezone.localdate()
-        start_of_week = today - timedelta(days=today.weekday())
-        end_of_week   = start_of_week + timedelta(days=6)
-        qs = Reservation.objects.filter(date__range=(start_of_week, end_of_week))
-        # si c'est un admin ou responsable, on voit tout
-        if user.is_staff or user.role == 'RESPONSABLE_GUICHET' or user.role == 'ADMIN':
-            return qs.order_by('-date', '-heure')
-        # sinon on ne voit que ce qu'on a initié
-        return qs.filter(initiateur=user).order_by('-date', '-heure')
+        base_qs = Reservation.objects.all()
+
+        if user.is_staff or user.role in FULL_ACCESS_ROLES:
+        # plus aucun filtre → le responsable voit tout
+            return base_qs.order_by('-date', '-heure')
+
+    # sinon, on garde la logique restreinte
+        start = timezone.localdate()
+        end   = start + timedelta(days=6)
+        return (
+        base_qs
+        .filter(initiateur=user, date__range=(start, end))
+        .order_by('-date', '-heure')
+    )
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -36,11 +42,5 @@ class ReservationViewSet(viewsets.ModelViewSet):
         return ReservationSerializer
 
     def perform_create(self, serializer):
-<<<<<<< HEAD
-        # on a besoin que le serializer connaisse `request` dans context pour décrémenter
         serializer.context['request'] = self.request
         serializer.save()
-=======
-        etudiant = self.request.user.as_etudiant
-        serializer.save(etudiant=etudiant)
->>>>>>> parent of 23a4dc7c ( Annulation d'une réservation)

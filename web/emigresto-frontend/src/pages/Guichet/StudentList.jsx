@@ -61,7 +61,7 @@ export default function StudentList() {
     pdf.text("Liste des Étudiants", 14, 10);
   
     const head = [
-      ["ID", "Matricule", "Nom & Prénom", "Email", "Téléphone", "Sexe", "Solde (FCFA)", "Tickets Restants"]
+      ["ID", "Matricule", "Nom & Prénom", "Email", "Téléphone", "Sexe", "Solde (FCFA)", "Tickets petit dejeuner","Tickets dejeuner"]
     ];
   
     const body = filteredAndSortedEtudiants.map((e) => [
@@ -72,7 +72,8 @@ export default function StudentList() {
       e.telephone,
       e.sexe,
       Number(e.solde || 0).toFixed(2),
-      e.ticket_quota,
+      e.ticket_quota_80,
+      e.ticket_quota_125
     ]);
   
     autoTable(pdf, {
@@ -135,8 +136,11 @@ export default function StudentList() {
                 <th className="border px-2 py-2 text-left font-semibold w-[10%] text-xs cursor-pointer" onClick={() => setSortBy('telephone')}>Téléphone</th>
                 <th className="border px-2 py-2 text-left font-semibold w-[5%] text-xs cursor-pointer" onClick={() => setSortBy('sexe')}>Sexe</th>
                 <th className="border px-2 py-2 text-right font-semibold w-[15%] text-xs cursor-pointer" onClick={() => setSortBy('solde')}>Solde (FCFA)</th>
-                <th className="border px-2 py-2 text-right font-semibold w-[15%] text-xs cursor-pointer" onClick={() => setSortBy('ticket_quota')}>
-                  Tickets Restants
+                <th className="border px-2 py-2 text-right font-semibold w-[15%] text-xs cursor-pointer" onClick={() => setSortBy('ticket_quota_80')}>
+                  Tickets Restants Petit Dejeuner
+                </th>
+                <th className="border px-2 py-2 text-right font-semibold w-[15%] text-xs cursor-pointer" onClick={() => setSortBy('ticket_quota_125')}>
+                  Tickets Restants Dejeuner
                 </th>
               </tr>
             </thead>
@@ -157,7 +161,8 @@ export default function StudentList() {
                   <td className="border px-2 py-1 text-right text-xs">
                     {Number(etu.solde || 0).toFixed(2)}
                   </td>
-                  <td className="border px-2 py-1 text-right text-xs">{etu.ticket_quota}</td>
+                  <td className="border px-2 py-1 text-right text-xs">{etu.ticket_quota_80}</td>
+                  <td className="border px-2 py-1 text-right text-xs">{etu.ticket_quota_125}</td>
                 </tr>
               ))}
             </tbody>
