@@ -6,8 +6,7 @@ from .views import (
     auth_views, etudiant_views, jour_views, notification_views,
     paiement_views, personnel_views, recu_views,
     reservation_views, ticket_views, transaction_views,
-    utilisateur_views, recharge_views, user_details_views, periode_views,
-     
+    utilisateur_views, recharge_views, user_details_views, periode_views
 )
 
 router = DefaultRouter()
@@ -44,8 +43,12 @@ urlpatterns = [
 
     # User details endpoint
     path('api/user-details/', user_details_views.UserDetailsAPIView.as_view(), name='user-details'),
+<<<<<<< HEAD
 
     # Cancel reservation endpoint (now inside the api/ namespace)
     #path('api/cancel-reservations/', reservation_views.CancelReservationView.as_view(), name='cancel_reservations'), # <--- CORRECTED LINE
 
 ]
+=======
+]
+>>>>>>> parent of 23a4dc7c ( Annulation d'une réservation)

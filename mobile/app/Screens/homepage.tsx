@@ -241,29 +241,23 @@ const fetchReservations = useCallback(async () => {
 
     // CORRECTED: Iterate over responseData.results
     responseData.results.forEach((reservation: any) => {
-     const periode = reservation.periode?.nomPeriode;
-        const fullJourName = reservation.jour?.nomJour;
+  const periode = reservation.periode?.nomPeriode;
+  const fullJourName = reservation.jour?.nomJour; // Get the full day name from API
 
-        // --- THE CRUCIAL CHANGE IS HERE: Add the status check ---
-        // Only process reservations that are 'VALIDE'
-        if (reservation.statut === 'VALIDE') { // <--- ADD THIS LINE
-            console.log(`Processing VALID reservation: Periode: ${periode}, Full Day: ${fullJourName}, Statut: ${reservation.statut}`);
+  console.log(`Processing reservation: Periode: ${periode}, Full Day: ${fullJourName}`); // NEW LOG
 
-            // Convert full day name to abbreviation
-            const abbreviatedJour = jourToAbbreviation[fullJourName];
+  // Convert full day name to abbreviation
+  const abbreviatedJour = jourToAbbreviation[fullJourName];
 
-            console.log(`Converted to Abbreviated Day: ${abbreviatedJour}`);
+  console.log(`Converted to Abbreviated Day: ${abbreviatedJour}`); // NEW LOG
 
-            if (periode && repasMap[periode] && abbreviatedJour && !repasMap[periode].includes(abbreviatedJour)) {
-                repasMap[periode].push(abbreviatedJour);
-                console.log(`Added ${abbreviatedJour} to ${periode}. Current ${periode} days: ${repasMap[periode]}`);
-            } else {
-                console.log(`Did not add (condition failed): Periode: ${periode}, Abbreviated Day: ${abbreviatedJour}. Condition failed: ${!periode || !repasMap[periode] || !abbreviatedJour || repasMap[periode].includes(abbreviatedJour)}`);
-            }
-        } else {
-            console.log(`Skipping reservation with status: ${reservation.statut}. Only VALIDE reservations are displayed.`); // NEW LOG for skipped items
-        }
-    });
+  if (periode && repasMap[periode] && abbreviatedJour && !repasMap[periode].includes(abbreviatedJour)) {
+    repasMap[periode].push(abbreviatedJour);
+    console.log(`Added ${abbreviatedJour} to ${periode}. Current ${periode} days: ${repasMap[periode]}`); // NEW LOG
+  } else {
+    console.log(`Did not add: Periode: ${periode}, Abbreviated Day: ${abbreviatedJour}. Condition failed: ${!periode || !repasMap[periode] || !abbreviatedJour || repasMap[periode].includes(abbreviatedJour)}`); // NEW LOG
+  }
+});
 
     console.log("Final repasMap after processing:", repasMap); // Keep this for verification
     setReservations(repasMap);
@@ -271,44 +265,6 @@ const fetchReservations = useCallback(async () => {
     console.error("Erreur chargement des réservations:", error);
   }
 }, []);
-
-// NEW: Function to handle cancellation
-const handleCancelReservations = useCallback(async (reservationsToCancel: { [key: string]: string[] }) => {
-  try {
-    const token = await AsyncStorage.getItem('access_token');
-    if (!token) {
-      router.replace('/Screens/Login');
-      return;
-    }
-
-    const response = await fetch('http://127.0.0.1:8000/api/cancel-reservations/', {
-      method: 'POST', // Or 'DELETE' if your API supports it, but POST with body is common for batch operations
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ reservations_to_cancel: reservationsToCancel }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Cancellation failed:', errorData);
-      throw new Error(errorData.message || 'Échec de l\'annulation des réservations');
-    }
-
-    const responseData = await response.json();
-    console.log('Cancellation successful:', responseData);
-    // Refresh reservations after successful cancellation
-    fetchReservations();
-    fetchUserData(); // Also refresh user data in case balance changes (e.g., if tickets are refunded)
-  } catch (error: any) {
-    console.error('Error during cancellation:', error);
-    // You might want to show an alert to the user here
-    alert(`Erreur d'annulation: ${error.message}`);
-  }
-}, [fetchReservations, fetchUserData, router]);
-
-
 // NOUVELLE FONCTION DE RAPPEL POUR LA MISE À JOUR DES RÉSERVATIONS
   const handleReservationSuccess = useCallback(() => {
     console.log("Reservation successful! Re-fetching reservations...");
@@ -429,7 +385,7 @@ const handleCancelReservations = useCallback(async (reservationsToCancel: { [key
         </Text>
 
         {/* Use the new MenuDeroulant component here */}
-        <MenuDeroulant reservations={reservations} onCancelReservations={handleCancelReservations} />
+        <MenuDeroulant reservations={reservations} onCancelReservations={() => {}} />
 
         <Animated.View
           style={{

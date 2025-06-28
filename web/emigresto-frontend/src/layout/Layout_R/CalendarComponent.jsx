@@ -17,13 +17,12 @@ export default function CalendarComponent() {
     setError(null);    // Reset errors
 
     // Fetch all relevant reservations (assuming page_size might be needed for many)
-     Promise.all([
+    Promise.all([
       API.reservation.list({ page_size: 1000 }), // Ensure all reservations are fetched
       API.periode.list() // Fetch periods
     ])
       .then(([resReservations, resPeriodes]) => {
-        // --- IMPORTANT CHANGE: Filter for VALIDE status here ---
-        setReservations(resReservations.results.filter(r => r.statut === 'VALIDE')); // <--- ADDED FILTER
+        setReservations(resReservations.results);
         const mapping = {};
         resPeriodes.results.forEach(p => {
           mapping[p.id] = p.nomPeriode;
@@ -32,11 +31,11 @@ export default function CalendarComponent() {
         setLoading(false); // End loading
       })
       .catch((err) => {
-        console.error("Error fetching calendar data:", err);
-        setError(err);
-        setLoading(false);
+        setError("❗ Impossible de charger les données du calendrier.");
+        console.error("CalendarComponent fetch error:", err);
+        setLoading(false); // End loading on error
       });
-  }, []); 
+  }, [])
 
   // 📅 Filtrage des réservations du jour sélectionné
   const daily = reservations.filter(r =>
