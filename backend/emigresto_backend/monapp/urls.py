@@ -46,6 +46,6 @@ urlpatterns = [
     path('api/user-details/', user_details_views.UserDetailsAPIView.as_view(), name='user-details'),
 
     # Cancel reservation endpoint (now inside the api/ namespace)
-    path('api/cancel-reservations/', reservation_views.CancelReservationView.as_view(), name='cancel_reservations'), # <--- CORRECTED LINE
+    #path('api/cancel-reservations/', reservation_views.CancelReservationView.as_view(), name='cancel_reservations'), # <--- CORRECTED LINE
 
 ]

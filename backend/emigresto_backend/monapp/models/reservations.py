@@ -1,7 +1,8 @@
-# monapp/models/reservations.py
+# monapp/models/reservation.py
 from django.db import models
+from django.db.models import F
 from django.utils import timezone
-from datetime import timedelta, time, date # Import time and date
+from .utilisateur import Utilisateur
 from .etudiant import Etudiant
 from .jour import Jour
 from .periode import Periode
@@ -12,63 +13,52 @@ class Reservation(models.Model):
         ('ANNULE', 'Annulée'),
     ]
 
-    id          = models.BigAutoField(primary_key=True)
-    date        = models.DateField() # Changed default=timezone.now, date will be provided by user
-    heure       = models.TimeField(default=timezone.now) # This might be dynamic based on period, or can be fixed
-    statut      = models.CharField(max_length=10, choices=STATUT_CHOICES, default='VALIDE')
-    etudiant    = models.ForeignKey(  
-        Etudiant,
-        on_delete=models.CASCADE,
-        related_name='reservations_effectuees',
-        help_text="L'étudiant qui initie la réservation"
+    id               = models.BigAutoField(primary_key=True)
+    date             = models.DateField(
+        help_text="Date de la réservation (détermine la semaine ciblée)"
     )
-    reservant_pour = models.ForeignKey(
-        Etudiant,
-        on_delete=models.CASCADE,
-        related_name='reservations_recueillies',
-        null=True,
-        blank=True,
-        help_text="Optionnel : matricule du camarade pour qui on réserve"
+    heure            = models.TimeField(default=timezone.now)
+    statut           = models.CharField(
+        max_length=10, choices=STATUT_CHOICES, default='VALIDE'
     )
-    jour        = models.ForeignKey(
-        Jour,
-        on_delete=models.PROTECT,
-        related_name='reservations',
-        help_text="Jour de la réservation"
+    # QUI a initié la réservation :
+    initiateur       = models.ForeignKey(
+        Utilisateur, on_delete=models.CASCADE,
+        related_name='reservations_initiees'
     )
-    periode     = models.ForeignKey(
-        Periode,
-        on_delete=models.PROTECT,
-        related_name='reservations',
-        help_text="Période de la réservation (Petit-déjeuner, Déjeuner, DINER)"
+    # POUR QUI (toujours un étudiant) :
+    reservant_pour   = models.ForeignKey(
+        Etudiant, on_delete=models.PROTECT,
+        related_name='reservations_beneficiees'
+    )
+    jour             = models.ForeignKey(
+        Jour, on_delete=models.PROTECT, related_name='reservations'
+    )
+    periode          = models.ForeignKey(
+        Periode, on_delete=models.PROTECT, related_name='reservations'
     )
 
     class Meta:
         db_table = 'reservation'
-        # Fix: 'periode__ordre' was changed to 'periode__nomPeriode'
-        # because the Periode model does not have an 'ordre' field,
-        # but it does have 'nomPeriode'.
-        ordering = ['date', 'periode__nomPeriode']
-        unique_together = ('etudiant', 'date', 'periode')
+        ordering = ['-date', 'periode__nomPeriode']
+        unique_together = ('reservant_pour', 'date', 'periode','jour')
 
     def __str__(self):
-        # Assuming Periode model has a 'nomPeriode' field,
-        # or you might need to adjust this if it's 'nom_periode'
-        # based on how you access it in other parts of your code.
-        # Based on periode.py, it's nomPeriode.
-        return f"Réservation de {self.etudiant.get_full_name} pour {self.periode.nomPeriode} le {self.date}"
+        return (
+            f"#{self.id} {self.initiateur.email} → "
+            f"{self.reservant_pour.get_fullName} / "
+            f"{self.periode.nomPeriode} le {self.date}"
+        )
 
-
+    def annuler(self):
+        if self.statut != 'ANNULE':
+            self.statut = 'ANNULE'
+            self.save(update_fields=['statut'])
     # @TODO: Re-evaluate if this method is still needed or if serializer validation is enough
     def creer(self):
         """Valide et enregistre une nouvelle réservation."""
         # This logic will mostly be handled by the serializer's validate method
         self.save()
-
-    def annuler(self):
-        """Annule la réservation (soft)."""
-        self.statut = 'ANNULE'
-        self.save(update_fields=['statut'])
 
     def modifier(self, **kwargs):
         """
@@ -84,7 +74,7 @@ class Reservation(models.Model):
     @property
     def beneficiaire(self):
         """Retourne l'Etudiant bénéficiaire de la réservation."""
-        return self.reservant_pour or self.etudiant
+        return self.reservant_pour 
 
     def get_details(self):
         """Chaîne descriptive de la réservation."""

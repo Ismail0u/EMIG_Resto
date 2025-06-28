@@ -32,6 +32,22 @@ export default function Login() {
         Alert.alert('Succès', 'Connexion réussie!');
         await AsyncStorage.setItem('access_token', data.access);
         await AsyncStorage.setItem('refreshToken', data.refresh);
+          // NOUVEAU : récupérer l'ID de l'étudiant connecté
+        const userDetailsResponse = await fetch('http://127.0.0.1:8000/api/user-details/', {
+          headers: {
+           'Authorization': `Bearer ${data.access}`,
+           'Content-Type': 'application/json',
+          },
+         });
+
+        const userDetails = await userDetailsResponse.json();
+          // Stocker l'ID de l'étudiant (reservant_pour)
+        if (userDetails?.etudiant?.id) {
+          await AsyncStorage.setItem('user_id', String(userDetails.etudiant.id));
+        } else {
+          Alert.alert('Erreur', "Impossible de récupérer l'identifiant étudiant.");
+          return;
+        }
         router.push('/Screens/homepage');
       } else {
         Alert.alert('Erreur de connexion', data.detail || JSON.stringify(data) || 'Identifiants incorrects.');

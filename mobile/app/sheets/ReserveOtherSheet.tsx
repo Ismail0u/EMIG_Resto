@@ -112,13 +112,30 @@ const ReserveOtherSheet: React.FC<ReserveOtherSheetProps> = ({
         dateObj.setDate(today.getDate() + daysUntil);
         const formattedDate = format(dateObj, 'yyyy-MM-dd');
 
+        // Requête pour récupérer l'étudiant par matricule
+        const etudiantResponse = await fetch(`http://127.0.0.1:8000/api/etudiants/?matricule=${studentMatricule}`, {
+          headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+         },
+         });
+        const etudiantData = await etudiantResponse.json();
+
+        if (!etudiantResponse.ok || !etudiantData.results || etudiantData.results.length === 0) {
+          allSuccessful = false;
+          encounteredErrors.push(`Aucun étudiant trouvé pour le matricule : ${studentMatricule}`);
+          continue; // Skip to next day
+        }
+        const reservantPourId = etudiantData.results[0].id;
+
         const reservation = {
           jour: dayNumber,
           periode: mealToId[selectedMeal],
           date: formattedDate,
           heure: "12:00:00",
-          matricule_etudiant: studentMatricule, // Include student matricule
+          reservant_pour: reservantPourId,
         };
+
 
         const response = await fetch('http://127.0.0.1:8000/api/reservations/', {
           method: 'POST',
