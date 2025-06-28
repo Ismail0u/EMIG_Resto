@@ -129,7 +129,7 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
           heure: "12:00:00",
         };
         const baseUrl = await getApiUrl();
-        const response = await fetch('${baseUrl}/api/reservations/', {
+        const response = await fetch(`${baseUrl}/api/reservations/`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

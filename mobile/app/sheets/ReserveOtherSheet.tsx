@@ -139,7 +139,7 @@ const ReserveOtherSheet: React.FC<ReserveOtherSheetProps> = ({
         };
 
 
-        const response = await fetch('${baseUrl}/api/reservations/', {
+        const response = await fetch(`${baseUrl}/api/reservations/`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

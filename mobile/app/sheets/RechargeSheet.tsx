@@ -1,5 +1,4 @@
 // Components/sheets/RechargeSheet.tsx
-
 import { AntDesign, MaterialIcons } from '@expo/vector-icons'; // Importez MaterialIcons pour l'icône de succès
 import React, { useRef, useState } from 'react';
 import {

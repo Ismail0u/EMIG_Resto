@@ -191,7 +191,7 @@ export default function Homepage() {
       }
       console.log("Token being sent:", token);
       const baseUrl = await getApiUrl();
-      const response = await fetch('${baseUrl}/api/user-details/', {
+      const response = await fetch(`${baseUrl}/api/user-details/`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -231,7 +231,7 @@ const fetchReservations = useCallback(async () => {
     const token = await AsyncStorage.getItem('access_token');
     if (!token) return;
    const baseUrl = await getApiUrl();
-   const response = await fetch('${baseUrl}/api/reservations/', {
+   const response = await fetch(`${baseUrl}/api/reservations/`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
