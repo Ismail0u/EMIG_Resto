@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { Alert, Text, TextInput, Pressable, View, Image, Platform } from 'react-native';
 import Modal from 'react-native-modal';
+import { getApiUrl } from '../config';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,16 +17,13 @@ export default function Login() {
     }
 
     setIsFullScreenLoading(true);
-
-    // Données à envoyer - ajout de debug
     const loginData = { email, password };
-    console.log('📤 Données envoyées:', loginData);
 
     try {
-      // Étape 1: Authentification avec plus de debug
-      console.log('🚀 Tentative de connexion à:', 'http://127.0.0.1:8000/api/auth/token/');
-      
-      const response = await fetch('http://127.0.0.1:8000/api/auth/token/', {
+      const baseUrl = await getApiUrl();
+      console.log('🚀 Connexion à:', `${baseUrl}/api/auth/token/`);
+
+      const response = await fetch(`${baseUrl}/api/auth/token/`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -34,48 +32,34 @@ export default function Login() {
         body: JSON.stringify(loginData),
       });
 
-      console.log('📊 Status de la réponse:', response.status);
-      console.log('📊 Headers de la réponse:', response.headers);
-
-      // Lire la réponse comme texte d'abord pour débugger
       const responseText = await response.text();
-      console.log('📄 Réponse brute du serveur:', responseText);
+      console.log('📄 Réponse brute:', responseText);
 
       let data;
       try {
         data = JSON.parse(responseText);
         console.log('✅ Données parsées:', data);
       } catch (parseError) {
-        console.error('❌ Erreur de parsing JSON:', parseError);
+        console.error('❌ JSON invalide:', parseError);
         throw new Error(`Réponse invalide du serveur: ${responseText}`);
       }
 
       if (!response.ok) {
-        // Log détaillé de l'erreur
-        console.error('❌ Erreur serveur:', {
-          status: response.status,
-          statusText: response.statusText,
-          data: data
-        });
-        
-        // Messages d'erreur plus spécifiques
+        console.error('❌ Erreur HTTP:', response.status, data);
         if (response.status === 400) {
-          throw new Error(data.detail || data.message || 'Données invalides. Vérifiez vos identifiants.');
+          throw new Error(data.detail || data.message || 'Identifiants invalides.');
         } else if (response.status === 401) {
           throw new Error('Identifiants incorrects.');
         } else if (response.status === 404) {
-          throw new Error('Service de connexion non trouvé.');
+          throw new Error('Service non trouvé.');
         } else {
           throw new Error(data.detail || `Erreur serveur (${response.status})`);
         }
       }
 
-      console.log('✅ Connexion réussie, tokens reçus');
+      console.log('✅ Connexion réussie, récupération des infos...');
 
-      // Étape 2: Récupération des détails utilisateur
-      console.log('🔍 Récupération des détails utilisateur...');
-      
-      const userDetailsResponse = await fetch('http://127.0.0.1:8000/api/user-details/', {
+      const userDetailsResponse = await fetch(`${baseUrl}/api/user-details/`, {
         headers: {
           'Authorization': `Bearer ${data.access}`,
           'Content-Type': 'application/json',
@@ -83,53 +67,37 @@ export default function Login() {
         },
       });
 
-      console.log('📊 Status user-details:', userDetailsResponse.status);
-
+      const userDetailsText = await userDetailsResponse.text();
       if (!userDetailsResponse.ok) {
-        const errorText = await userDetailsResponse.text();
-        console.error('❌ Erreur user-details:', errorText);
-        throw new Error('Impossible de récupérer les détails utilisateur.');
+        console.error('❌ user-details erreur:', userDetailsText);
+        throw new Error('Impossible de récupérer les informations utilisateur.');
       }
 
-      const userDetails = await userDetailsResponse.json();
-      console.log('👤 Détails utilisateur:', userDetails);
+      const userDetails = JSON.parse(userDetailsText);
+      console.log('👤 Utilisateur:', userDetails);
 
       if (!userDetails?.id) {
-        console.error('❌ ID utilisateur manquant dans:', userDetails);
-        throw new Error('Identifiant utilisateur manquant.');
+        throw new Error('ID utilisateur manquant.');
       }
 
-      // Étape 3: Stockage des données
-      console.log('💾 Stockage des données...');
+      console.log('💾 Sauvegarde des tokens...');
       await AsyncStorage.setItem('access_token', data.access);
       await AsyncStorage.setItem('refreshToken', data.refresh);
       await AsyncStorage.setItem('user_id', String(userDetails.id));
       await AsyncStorage.setItem('user_email', userDetails.email);
 
-      console.log('✅ Données stockées avec succès');
-
-      // Étape 4: Navigation
-      console.log('🧭 Navigation vers homepage...');
       router.replace('/Screens/homepage');
-      
-      setTimeout(() => {
-        setIsFullScreenLoading(false);
-      }, 500);
+      setTimeout(() => setIsFullScreenLoading(false), 500);
 
-    } catch (error) {
-      console.error('💥 Erreur complète:', error);
+    } catch (error: any) {
+      console.error('💥 Erreur login:', error);
       setIsFullScreenLoading(false);
-      
-      Alert.alert(
-        'Erreur de connexion', 
-        error.message || 'Impossible de se connecter. Vérifiez votre connexion.'
-      );
+      Alert.alert('Erreur de connexion', error.message || 'Vérifiez votre connexion réseau.');
     }
   };
 
   return (
     <View className="flex-1 justify-center items-center bg-white p-4">
-      {/* Conteneur pour le logo et le texte */}
       <View className="items-center mb-6">
         <Image
           source={require('../icons/emig_logo.png')}
@@ -190,30 +158,35 @@ export default function Login() {
         </Text>
       </Text>
 
-      {/* Modal de chargement - sans useNativeDriver pour éviter les warnings */}
+      <Pressable onPress={() => router.push('/Screens/ApiConfigScreen')}>
+        <Text className="text-sm text-gray-600 mt-6 underline">
+          Configurer l'URL du serveur
+        </Text>
+      </Pressable>
+
       <Modal
         isVisible={isFullScreenLoading}
         animationIn="fadeIn"
         animationOut="fadeOut"
-        useNativeDriver={Platform.OS !== 'web'} // Désactiver sur web
-        statusBarTranslucent={true}
+        useNativeDriver={Platform.OS !== 'web'}
+        statusBarTranslucent
         backdropOpacity={1}
       >
-        <View style={{ 
-          flex: 1, 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          backgroundColor: 'white' 
+        <View style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: 'white'
         }}>
           <Image
             source={require('../icons/emig_logo.png')}
             style={{ width: 200, height: 200, marginBottom: 20 }}
             resizeMode="contain"
           />
-          <Text style={{ 
-            fontSize: 24, 
-            fontWeight: 'bold', 
-            color: '#12A2E1' 
+          <Text style={{
+            fontSize: 24,
+            fontWeight: 'bold',
+            color: '#12A2E1'
           }}>
             Chargement...
           </Text>

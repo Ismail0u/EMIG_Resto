@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import React, { useState } from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
+import { getApiUrl } from '../config';
 
 type ReserveOtherSheetProps = {
   isVisible: boolean;
@@ -113,7 +114,8 @@ const ReserveOtherSheet: React.FC<ReserveOtherSheetProps> = ({
         const formattedDate = format(dateObj, 'yyyy-MM-dd');
 
         // Requête pour récupérer l'étudiant par matricule
-        const etudiantResponse = await fetch(`http://127.0.0.1:8000/api/etudiants/?matricule=${studentMatricule}`, {
+        const baseUrl = await getApiUrl();
+        const etudiantResponse = await fetch(`${baseUrl}/api/etudiants/?matricule=${studentMatricule}`, {
           headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -137,7 +139,7 @@ const ReserveOtherSheet: React.FC<ReserveOtherSheetProps> = ({
         };
 
 
-        const response = await fetch('http://127.0.0.1:8000/api/reservations/', {
+        const response = await fetch('${baseUrl}/api/reservations/', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

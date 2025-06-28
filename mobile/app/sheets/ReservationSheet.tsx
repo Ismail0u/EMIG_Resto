@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import React, { useState } from 'react';
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native';
 import Modal from 'react-native-modal';
+import { getApiUrl } from '../config';
 
 type ReserveBottomSheetProps = {
   isVisible: boolean;
@@ -127,8 +128,8 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
           date: formattedDate,
           heure: "12:00:00",
         };
-
-        const response = await fetch('http://127.0.0.1:8000/api/reservations/', {
+        const baseUrl = await getApiUrl();
+        const response = await fetch('${baseUrl}/api/reservations/', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

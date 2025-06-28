@@ -248,26 +248,26 @@ export default function MenuDeroulant({ reservations, onCancelReservations }: Me
       </TouchableOpacity>
 
       <RepasBox
-        titre="DÉJEUNER"
+        titre="Déjeuner"
         joursActifs={reservations['Déjeuner'] || []}
         deleteMode={deleteMode}
         onDayPress={handleDayPress}
-        selectedDaysToCancel={selectedDaysToCancel['DÉJEUNER']}
+        selectedDaysToCancel={selectedDaysToCancel['Déjeuner']}
       />
       <Animated.View style={{ height: menuHeight, overflow: 'hidden' }}>
         <RepasBox
-          titre="DINER"
+          titre="Diner"
           joursActifs={reservations['Diner'] || []}
           deleteMode={deleteMode}
           onDayPress={handleDayPress}
-          selectedDaysToCancel={selectedDaysToCancel['DINER']}
+          selectedDaysToCancel={selectedDaysToCancel['Diner']}
         />
         <RepasBox
-          titre="PETIT-DÉJEUNER"
+          titre="Petit-Déjeuner"
           joursActifs={reservations['Petit-Déjeuner'] || []}
           deleteMode={deleteMode}
           onDayPress={handleDayPress}
-          selectedDaysToCancel={selectedDaysToCancel['PETIT-DÉJEUNER']}
+          selectedDaysToCancel={selectedDaysToCancel['Petit-DÉJEUNER']}
         />
       </Animated.View>
 

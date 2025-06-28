@@ -19,7 +19,8 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.moussaismael.EMIGresto"
     },
     "web": {
       "bundler": "metro",
@@ -42,6 +43,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "dbd5d888-b852-4e14-b26b-bdb92ac2c1e5"
+      }
     }
   }
 }

@@ -47,10 +47,10 @@ class ReservationViewSet(viewsets.ModelViewSet):
     
     def destroy(self, request, *args, **kwargs):
         """
-        Au lieu de supprimer, on annule la résa (statut='ANNULE').
+        HTTP DELETE → on change juste le statut en 'ANNULE'
+        et on renvoie 204 No Content.
         """
-        instance = self.get_object()
-        # On ne supprime pas, on change juste le statut
-        instance.statut = 'ANNULE'
-        instance.save(update_fields=['statut'])
+        reservation = self.get_object()
+        # Méthode utilitaire sur le modèle
+        reservation.annuler()
         return Response(status=status.HTTP_204_NO_CONTENT)

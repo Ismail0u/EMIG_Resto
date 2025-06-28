@@ -5,6 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { getApiUrl } from '../config';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -175,7 +176,7 @@ export default function Homepage() {
   const toggleReloadModal = () => setReloadModalVisible(!isReloadModalVisible);
   // NEW: Toggle function for "Reserve for Another" modal
   const toggleReserveOtherModal = () => setReserveOtherModalVisible(!isReserveOtherModalVisible);
-
+  
   const toggleBottomSheet = () => setModalVisible((prev) => !isModalVisible);
 
   const fetchUserData = useCallback(async () => {
@@ -189,7 +190,8 @@ export default function Homepage() {
         return;
       }
       console.log("Token being sent:", token);
-      const response = await fetch('http://127.0.0.1:8000/api/user-details/', {
+      const baseUrl = await getApiUrl();
+      const response = await fetch('${baseUrl}/api/user-details/', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -228,8 +230,8 @@ const fetchReservations = useCallback(async () => {
   try {
     const token = await AsyncStorage.getItem('access_token');
     if (!token) return;
-
-   const response = await fetch('http://127.0.0.1:8000/api/reservations/', {
+   const baseUrl = await getApiUrl();
+   const response = await fetch('${baseUrl}/api/reservations/', {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/json',
@@ -284,7 +286,9 @@ const fetchReservations = useCallback(async () => {
 const handleCancelReservations = useCallback(
   async (toCancel: Record<string,string[]>) => {
     try {
-      // 1) Récupère tous les IDs à delete
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) return;
+
       const ids: number[] = [];
       for (const [periodeNom, joursAbr] of Object.entries(toCancel)) {
         for (const jourAbr of joursAbr) {
@@ -294,17 +298,22 @@ const handleCancelReservations = useCallback(
       }
       if (ids.length === 0) return;
 
-      // 2) Appelle DELETE sur chacun
-      await Promise.all(ids.map(id => API.reservation.delete(id)));
+      // Appelle DELETE sur chacun
+      const baseUrl = await getApiUrl();
+      await Promise.all(ids.map(id =>
+        fetch(`${baseUrl}/api/reservations/${id}/`, {
+          method: 'DELETE',
+          headers: { Authorization: `Bearer ${token}` }
+        })
+      ));
 
-      // 3) Mets à jour les réservations brutes et le repasMap
+      // Mets à jour les états...
       const updatedRaw = reservationsBrutes.map(r =>
         ids.includes(r.id) ? { ...r, statut: 'ANNULE' } : r
       );
       setReservationsBrutes(updatedRaw);
 
-      // Reconstruis ton repasMap
-      const newMap: Record<string,string[]> = {
+      const newMap: Record<string, string[]> = {
         'Petit-Déjeuner': [], 'Déjeuner': [], 'Diner': []
       };
       updatedRaw.forEach(r => {
@@ -318,7 +327,6 @@ const handleCancelReservations = useCallback(
 
     } catch (err) {
       console.error("Échec annulation :", err);
-      // tu peux lever un toast ici
     }
   },
   [reservationsBrutes]
