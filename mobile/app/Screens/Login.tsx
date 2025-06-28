@@ -42,13 +42,16 @@ export default function Login() {
 
         const userDetails = await userDetailsResponse.json();
           // Stocker l'ID de l'étudiant (reservant_pour)
-        if (userDetails?.etudiant?.id) {
-          await AsyncStorage.setItem('user_id', String(userDetails.etudiant.id));
-        } else {
-          Alert.alert('Erreur', "Impossible de récupérer l'identifiant étudiant.");
-          return;
-        }
-        router.push('/Screens/homepage');
+        if (userDetails?.id) { // Access the 'id' directly from userDetails
+  await AsyncStorage.setItem('user_id', String(userDetails.id));
+  await AsyncStorage.setItem('user_email', userDetails.email); // Good to store email too
+} else {
+  Alert.alert('Erreur', "Impossible de récupérer l'identifiant étudiant. (ID manquant)");
+  setIsFullScreenLoading(false); // Make sure to hide loading on error
+  setLoading(false);
+  return;
+}
+router.replace('/Screens/homepage'); // Use router.replace to prevent going back to login
       } else {
         Alert.alert('Erreur de connexion', data.detail || JSON.stringify(data) || 'Identifiants incorrects.');
       }

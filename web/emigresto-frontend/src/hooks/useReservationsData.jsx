@@ -68,7 +68,6 @@ const useReservationsData = () => {
     const map = new Map();
     reservationsBrutes.forEach((r) => {
       // --- NOUVEAU: Filtrer par statut 'VALIDE' ---
-      if (r.statut === 'VALIDE') { // <--- AJOUTEZ CETTE LIGNE
         const reservationDate = new Date(r.date);
         reservationDate.setHours(0, 0, 0, 0);
 
@@ -89,7 +88,6 @@ const useReservationsData = () => {
           // Utilisez une clé unique pour chaque cellule de réservation (jour-période)
           map.get(keyId).set(`${r.jour.id}-${r.periode.id}`, r); 
         }
-      } // <--- FIN DE LA CONDITION STATUT
     });
     return map;
   }, [reservationsBrutes, getReservationDate]); // Recalculer quand les réservations brutes ou les dates des jours changent
@@ -270,13 +268,16 @@ const useReservationsData = () => {
         periodes.forEach((p) => {
           const key = `${j.id}-${p.id}`; // Clé correcte pour la map de l'étudiant
           const isReserved = reservationsMap.get(e.id)?.has(key);
-          s += isReserved ? "✔ " : "✘ ";
+          s += isReserved ? "O" : "X";
         });
         row.push(s.trim());
       });
       return row;
     });
-    pdf.autoTable({ head: [head], body, startY: 20 });
+    autoTable(pdf, {
+          head,
+          body,
+          startY: 20,});
     pdf.save("Reservations.pdf");
   }, [sortedEtudiants, jours, periodes, reservationsMap]);
 

@@ -101,6 +101,16 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
       let allSuccessful = true;
       let encounteredErrors: string[] = [];
 
+      // Retrieve userId and handle null
+      const userId = await AsyncStorage.getItem('user_id'); //
+      if (userId === null) { // Handle the case where userId is null
+        setErrorMessage("L'identifiant de l'utilisateur n'a pas été trouvé. Veuillez vous reconnecter.");
+        setIsFailureVisible(true);
+        setLoading(false);
+        return;
+      }
+      const reservantPourId = parseInt(userId); // Parse userId to integer after null check
+
       for (const dayName of selectedDays) {
         const dayNumber = dayToId[dayName];
         let daysUntil = (dayNumber % 7) - currentDay;
@@ -109,14 +119,13 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
         const dateObj = new Date();
         dateObj.setDate(today.getDate() + daysUntil);
         const formattedDate = format(dateObj, 'yyyy-MM-dd');
-        const userId = await AsyncStorage.getItem('user_id'); // ← stocké au login
 
         const reservation = {
-          reservant_pour: parseInt(userId), // ← obligatoire !
+          reservant_pour: reservantPourId, // Use the parsed reservantPourId
           jour: dayNumber,
           periode: mealToId[selectedMeal],
           date: formattedDate,
-          heure: "12:00:00", // Format HH:MM:SS
+          heure: "12:00:00",
         };
 
         const response = await fetch('http://127.0.0.1:8000/api/reservations/', {
@@ -153,7 +162,7 @@ const ReserveBottomSheet: React.FC<ReserveBottomSheetProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+};
 
   return (
     <>
