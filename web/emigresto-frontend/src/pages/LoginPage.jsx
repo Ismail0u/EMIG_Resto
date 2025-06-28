@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import logsvg1 from '../assets/images/logsvg1.png'
+import logsvg1 from '../assets/images/emig_logo.png'
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -44,9 +44,14 @@ export default function LoginPage() {
       <div className="bg-white rounded-xl shadow-md w-full max-w-4xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
         
         {/* --- Illustration --- */}
-        <div className="hidden md:flex items-center justify-center bg-blue-50 p-6">
-          <img src={logsvg1} alt="Illustration de connexion" className="w-3/4" />
+        <div className="hidden md:flex flex-col items-center justify-center bg-blue-50 p-6">
+         <img src={logsvg1} alt="Illustration de connexion" className="w-3/4 mb-4" />
+         <h1 className="text-3xl font-bold flex space-x-1">
+           <span className="text-blue-800">Emig</span>
+           <span className="text-red-400">Resto</span>
+         </h1>
         </div>
+
 
         {/* --- Formulaire de connexion --- */}
         <div className="p-8">

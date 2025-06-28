@@ -44,3 +44,13 @@ class ReservationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.context['request'] = self.request
         serializer.save()
+    
+    def destroy(self, request, *args, **kwargs):
+        """
+        Au lieu de supprimer, on annule la résa (statut='ANNULE').
+        """
+        instance = self.get_object()
+        # On ne supprime pas, on change juste le statut
+        instance.statut = 'ANNULE'
+        instance.save(update_fields=['statut'])
+        return Response(status=status.HTTP_204_NO_CONTENT)

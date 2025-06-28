@@ -134,6 +134,20 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+/** retourne l’ID de la réservation pour période+jourAbréviation */
+function findReservationId(list: any[], periodeNom: string, jourAbr: string): number|undefined {
+  const map: Record<string,string> = {
+    'Lundi':'Lun','Mardi':'Mar','Mercredi':'Mer',
+    'Jeudi':'Jeu','Vendredi':'Ven','Samedi':'Sam','Dimanche':'Dim'
+  };
+  const resa = list.find(r =>
+    r.periode?.nomPeriode === periodeNom &&
+    map[r.jour?.nomJour] === jourAbr
+  );
+  return resa?.id;
+}
+
+
 export default function Homepage() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'home' | 'notif' | 'profile'>('home');
@@ -154,7 +168,7 @@ export default function Homepage() {
 
   // MOVED HERE: useState for reservations
   const [reservations, setReservations] = useState<{ [key: string]: string[] }>({});
-
+  const [reservationsBrutes, setReservationsBrutes] = useState<any[]>([]);
 
   const toggleTicketModal = () => setTicketModalVisible(!isTicketModalVisible);
   const toggleReserveModal = () => setReserveModalVisible(!isReserveModalVisible);
@@ -226,6 +240,8 @@ const fetchReservations = useCallback(async () => {
     if (!response.ok) throw new Error('Erreur lors de la récupération des réservations');
 
     const responseData = await response.json();
+    const raw = responseData.results;              // <-- ligne ajoutée
+    setReservationsBrutes(raw);                    // <-- ligne ajoutée
 
     // Ajout sécurité car l’API Django retourne {count, next, previous, results}
     if (!responseData.results || !Array.isArray(responseData.results)) {
@@ -265,6 +281,49 @@ const fetchReservations = useCallback(async () => {
     console.error("Erreur chargement des réservations:", error);
   }
 }, []);
+const handleCancelReservations = useCallback(
+  async (toCancel: Record<string,string[]>) => {
+    try {
+      // 1) Récupère tous les IDs à delete
+      const ids: number[] = [];
+      for (const [periodeNom, joursAbr] of Object.entries(toCancel)) {
+        for (const jourAbr of joursAbr) {
+          const id = findReservationId(reservationsBrutes, periodeNom, jourAbr);
+          if (id) ids.push(id);
+        }
+      }
+      if (ids.length === 0) return;
+
+      // 2) Appelle DELETE sur chacun
+      await Promise.all(ids.map(id => API.reservation.delete(id)));
+
+      // 3) Mets à jour les réservations brutes et le repasMap
+      const updatedRaw = reservationsBrutes.map(r =>
+        ids.includes(r.id) ? { ...r, statut: 'ANNULE' } : r
+      );
+      setReservationsBrutes(updatedRaw);
+
+      // Reconstruis ton repasMap
+      const newMap: Record<string,string[]> = {
+        'Petit-Déjeuner': [], 'Déjeuner': [], 'Diner': []
+      };
+      updatedRaw.forEach(r => {
+        if (r.statut !== 'VALIDE') return;
+        const abbr = jourToAbbreviation[r.jour.nomJour];
+        if (!newMap[r.periode.nomPeriode].includes(abbr)) {
+          newMap[r.periode.nomPeriode].push(abbr);
+        }
+      });
+      setReservations(newMap);
+
+    } catch (err) {
+      console.error("Échec annulation :", err);
+      // tu peux lever un toast ici
+    }
+  },
+  [reservationsBrutes]
+);
+
 // NOUVELLE FONCTION DE RAPPEL POUR LA MISE À JOUR DES RÉSERVATIONS
   const handleReservationSuccess = useCallback(() => {
     console.log("Reservation successful! Re-fetching reservations...");
@@ -397,7 +456,11 @@ const fetchReservations = useCallback(async () => {
         </Text>
 
         {/* Use the new MenuDeroulant component here */}
-        <MenuDeroulant reservations={reservations} onCancelReservations={() => {}} />
+        <MenuDeroulant
+          reservations={reservations}
+          onCancelReservations={handleCancelReservations}
+        />
+
 
         <Animated.View
           style={{
